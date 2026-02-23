@@ -1,0 +1,82 @@
+﻿./composer.json has been updated
+Running composer update inertiajs/inertia-laravel laravel/sanctum tightenco/ziggy
+Loading composer repositories with package information
+Updating dependencies
+Nothing to modify in lock file
+Writing lock file
+Installing dependencies from lock file (including require-dev)
+Nothing to install, update or remove
+Generating optimized autoload files
+Warning: Ambiguous class resolution, "League\Flysystem\Local\FallbackMimeTypeDetector" was found in both "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem-local\FallbackMimeTypeDetector.php" and "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem/src\Local\FallbackMimeTypeDetector.php", the first will be used.
+Warning: Ambiguous class resolution, "League\Flysystem\Local\LocalFilesystemAdapter" was found in both "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem-local\LocalFilesystemAdapter.php" and "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem/src\Local\LocalFilesystemAdapter.php", the first will be used.
+Warning: Ambiguous class resolution, "League\Flysystem\Local\LocalFilesystemAdapterTest" was found in both "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem-local\LocalFilesystemAdapterTest.php" and "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/league/flysystem/src\Local\LocalFilesystemAdapterTest.php", the first will be used.
+Warning: Ambiguous class resolution, "App\Providers\AppServiceProvider" was found in both "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/app\Providers\AppServiceProvider.php" and "C:/Users/miche/privat-project/SmartSchools/smartschool-dashboard/backend/vendor/laravel/pint/app\Providers\AppServiceProvider.php", the first will be used.
+To resolve ambiguity in classes not under your control you can ignore them by path using exclude-from-classmap
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover --ansi
+
+  [37;44m INFO [39;49m Discovering packages.  
+
+  inertiajs/inertia-laravel [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/breeze [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/pail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sail [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/sanctum [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  laravel/tinker [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nesbot/carbon [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/collision [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  nunomaduro/termwind [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+  tightenco/ziggy [90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m[90m.[39m [32;1mDONE[39;22m
+
+56 packages you are using are looking for funding.
+Use the `composer fund` command to find out more!
+> @php artisan vendor:publish --tag=laravel-assets --ansi --force
+
+  [37;44m INFO [39;49m No publishable resources for tag [1m[laravel-assets][22m.  
+
+No security vulnerability advisories found.
+   INFO  Installing and building Node dependencies.  
+
+    
+added 58 packages, changed 1 package, and audited 227 packages in 10s
+
+48 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+    
+> build
+> vite build
+
+    [36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+    transforming...
+    [32mÔ£ô[39m 1010 modules transformed.
+    rendering chunks...
+computing gzip size...
+    [2mpublic/build/[22m[32mmanifest.json                                    [39m[1m[2m  7.20 kB[22m[1m[22m[2m Ôöé gzip:   0.89 kB[22m
+[2mpublic/build/[22m[35massets/app-BdwS7V_j.css                          [39m[1m[2m 41.68 kB[22m[1m[22m[2m Ôöé gzip:   7.65 kB[22m
+[2mpublic/build/[22m[36massets/InputLabel-DNivsMOB.js                    [39m[1m[2m  0.21 kB[22m[1m[22m[2m Ôöé gzip:   0.18 kB[22m
+[2mpublic/build/[22m[36massets/GuestLayout-CBAc_kUk.js                   [39m[1m[2m  0.50 kB[22m[1m[22m[2m Ôöé gzip:   0.33 kB[22m
+[2mpublic/build/[22m[36massets/PrimaryButton-BdP5uAqz.js                 [39m[1m[2m  0.50 kB[22m[1m[22m[2m Ôöé gzip:   0.34 kB[22m
+[2mpublic/build/[22m[36massets/TextInput-VRfoXbcl.js                     [39m[1m[2m  0.54 kB[22m[1m[22m[2m Ôöé gzip:   0.36 kB[22m
+[2mpublic/build/[22m[36massets/Dashboard-CIRS2IOC.js                     [39m[1m[2m  0.64 kB[22m[1m[22m[2m Ôöé gzip:   0.38 kB[22m
+[2mpublic/build/[22m[36massets/Edit-CY65mf8s.js                          [39m[1m[2m  1.12 kB[22m[1m[22m[2m Ôöé gzip:   0.52 kB[22m
+[2mpublic/build/[22m[36massets/ForgotPassword-CRM_-DT3.js                [39m[1m[2m  1.14 kB[22m[1m[22m[2m Ôöé gzip:   0.65 kB[22m
+[2mpublic/build/[22m[36massets/ConfirmPassword-Bblv6iim.js               [39m[1m[2m  1.16 kB[22m[1m[22m[2m Ôöé gzip:   0.64 kB[22m
+[2mpublic/build/[22m[36massets/VerifyEmail-PQRN7PAL.js                   [39m[1m[2m  1.26 kB[22m[1m[22m[2m Ôöé gzip:   0.70 kB[22m
+[2mpublic/build/[22m[36massets/ResetPassword-BZx7TI-B.js                 [39m[1m[2m  1.78 kB[22m[1m[22m[2m Ôöé gzip:   0.70 kB[22m
+[2mpublic/build/[22m[36massets/Login-DpZPaUaq.js                         [39m[1m[2m  2.09 kB[22m[1m[22m[2m Ôöé gzip:   0.94 kB[22m
+[2mpublic/build/[22m[36massets/Register-CvKurQht.js                      [39m[1m[2m  2.28 kB[22m[1m[22m[2m Ôöé gzip:   0.83 kB[22m
+[2mpublic/build/[22m[36massets/UpdateProfileInformationForm-Cg3t6j14.js  [39m[1m[2m  2.29 kB[22m[1m[22m[2m Ôöé gzip:   1.00 kB[22m
+[2mpublic/build/[22m[36massets/UpdatePasswordForm-B6PFXkXU.js            [39m[1m[2m  2.34 kB[22m[1m[22m[2m Ôöé gzip:   0.86 kB[22m
+[2mpublic/build/[22m[36massets/ApplicationLogo-OvTHp6Sp.js               [39m[1m[2m  3.12 kB[22m[1m[22m[2m Ôöé gzip:   1.32 kB[22m
+[2mpublic/build/[22m[36massets/AuthenticatedLayout-aSWVNdKF.js           [39m[1m[2m  5.83 kB[22m[1m[22m[2m Ôöé gzip:   1.91 kB[22m
+[2mpublic/build/[22m[36massets/transition-B942_OOU.js                    [39m[1m[2m 14.62 kB[22m[1m[22m[2m Ôöé gzip:   5.83 kB[22m
+[2mpublic/build/[22m[36massets/Welcome-DN-BWUpB.js                       [39m[1m[2m 19.23 kB[22m[1m[22m[2m Ôöé gzip:   5.82 kB[22m
+[2mpublic/build/[22m[36massets/DeleteUserForm-BXHKS5yX.js                [39m[1m[2m 33.55 kB[22m[1m[22m[2m Ôöé gzip:  12.10 kB[22m
+[2mpublic/build/[22m[36massets/app-550k7PF9.js                           [39m[1m[2m337.06 kB[22m[1m[22m[2m Ôöé gzip: 112.76 kB[22m
+[32mÔ£ô built in 7.06s[39m
+
+
+   INFO  Breeze scaffolding installed successfully.  
+

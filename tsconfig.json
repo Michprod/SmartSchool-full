@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": false,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["resources/js/*"]
+    },
+    "types": ["vite/client"]
+  },
+  "include": [
+    "resources/js/**/*.ts",
+    "resources/js/**/*.tsx",
+    "resources/js/**/*.jsx",
+    "resources/js/**/*.js"
+  ],
+  "exclude": ["node_modules", "public"]
+}
