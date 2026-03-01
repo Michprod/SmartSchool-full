@@ -19,7 +19,7 @@ export default function GuestLayout({ children }) {
 
             <div className="mt-8 w-full overflow-hidden bg-white px-8 py-8 shadow-xl sm:max-w-md sm:rounded-2xl border border-gray-100">
                 <div className="mb-6 text-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Bienvenue</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Bienvenue blabla</h2>
                     <p className="text-sm text-gray-500 mt-1">Connectez-vous pour accéder à votre espace</p>
                 </div>
                 {children}
