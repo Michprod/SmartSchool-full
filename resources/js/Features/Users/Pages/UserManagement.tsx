@@ -46,51 +46,36 @@ const UserManagement: React.FC = () => {
   console.log('Photo file state:', photoFile);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setUsers([
-        {
-          id: '1',
-          firstName: 'Jean',
-          lastName: 'Mukendi',
-          email: 'jean.mukendi@smartschool.cd',
-          phone: '+243 81 234 5678',
-          role: 'admin',
-          status: 'active',
-          department: 'Administration',
-          permissions: ['*'],
-          createdAt: new Date('2024-01-15'),
-          lastLogin: new Date('2025-02-15')
-        },
-        {
-          id: '2',
-          firstName: 'Marie',
-          lastName: 'Kalala',
-          email: 'marie.kalala@smartschool.cd',
-          phone: '+243 99 876 5432',
-          role: 'teacher',
-          status: 'active',
-          department: 'Mathématiques',
-          permissions: ['students:read', 'classes:read', 'grades:write'],
-          createdAt: new Date('2024-02-20'),
-          lastLogin: new Date('2025-02-14')
-        },
-        {
-          id: '3',
-          firstName: 'Pierre',
-          lastName: 'Mbala',
-          email: 'pierre.mbala@smartschool.cd',
-          phone: '+243 82 345 6789',
-          role: 'accountant',
-          status: 'active',
-          department: 'Finance',
-          permissions: ['payments:*', 'finance:*'],
-          createdAt: new Date('2024-03-10'),
-          lastLogin: new Date('2025-02-13')
-        }
-      ]);
-      setLoading(false);
-    }, 1000);
+    const loadUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) throw new Error('Failed to fetch users');
+        const paginatedData = await response.json();
+        
+        const mappedUsers = paginatedData.data.map((u: any) => ({
+          id: u.id.toString(),
+          firstName: u.first_name,
+          lastName: u.last_name,
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+          status: u.is_active ? 'active' : 'inactive',
+          photo: u.avatar,
+          department: u.department,
+          permissions: [], // Permissions logic to follow
+          createdAt: new Date(u.created_at),
+          lastLogin: u.last_login ? new Date(u.last_login) : undefined
+        }));
+
+        setUsers(mappedUsers);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
   }, []);
 
   const roleLabels: Record<User['role'], string> = {

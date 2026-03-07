@@ -35,92 +35,16 @@ const InventoryPage: React.FC = () => {
 
   useEffect(() => {
     const loadInventory = async () => {
-      setTimeout(() => {
-        const mockItems: InventoryItem[] = [
-          {
-            id: '1',
-            name: 'Ordinateurs Portables Dell',
-            category: 'Informatique',
-            quantity: 25,
-            location: 'Salle Informatique A',
-            status: 'in_stock'
-          },
-          {
-            id: '2',
-            name: 'Tableaux Blancs Interactifs',
-            category: 'Matériel Pédagogique',
-            quantity: 8,
-            location: 'Salles de Classe',
-            status: 'in_use'
-          },
-          {
-            id: '3',
-            name: 'Chaises d\'Élèves',
-            category: 'Mobilier',
-            quantity: 150,
-            location: 'Entrepôt Principal',
-            status: 'in_stock'
-          },
-          {
-            id: '4',
-            name: 'Projecteurs Multimédia',
-            category: 'Électronique',
-            quantity: 12,
-            location: 'Salles de Classe',
-            status: 'in_use'
-          },
-          {
-            id: '5',
-            name: 'Ballons de Football',
-            category: 'Équipement Sportif',
-            quantity: 20,
-            location: 'Gymnase',
-            status: 'in_stock'
-          },
-          {
-            id: '6',
-            name: 'Microscopes',
-            category: 'Laboratoire',
-            quantity: 15,
-            location: 'Laboratoire Sciences',
-            status: 'in_use'
-          },
-          {
-            id: '7',
-            name: 'Imprimante Laser HP',
-            category: 'Informatique',
-            quantity: 3,
-            location: 'Bureau Administration',
-            status: 'under_maintenance'
-          },
-          {
-            id: '8',
-            name: 'Manuels Mathématiques 6ème',
-            category: 'Livres',
-            quantity: 80,
-            location: 'Bibliothèque',
-            status: 'in_stock'
-          },
-          {
-            id: '9',
-            name: 'Tables de Laboratoire',
-            category: 'Mobilier',
-            quantity: 12,
-            location: 'Laboratoire Sciences',
-            status: 'in_use'
-          },
-          {
-            id: '10',
-            name: 'Calculatrices Scientifiques',
-            category: 'Fournitures',
-            quantity: 45,
-            location: 'Salle des Professeurs',
-            status: 'in_stock'
-          }
-        ];
-        setItems(mockItems);
+      try {
+        const response = await fetch('/api/inventory');
+        if (!response.ok) throw new Error('Failed to fetch inventory');
+        const paginatedData = await response.json();
+        setItems(paginatedData.data);
+      } catch (error) {
+        console.error('Error loading inventory:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadInventory();

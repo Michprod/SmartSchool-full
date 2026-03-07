@@ -15,84 +15,40 @@ const AdmissionManagement: React.FC = () => {
 
   useEffect(() => {
     const loadApplications = async () => {
-      setTimeout(() => {
-        const mockApplications: Application[] = [
-          {
-            id: '1',
-            studentInfo: {
-              firstName: 'Pierre',
-              lastName: 'Nkomo',
-              dateOfBirth: new Date('2010-03-15'),
-              gender: 'M'
-            },
-            parentInfo: {
-              firstName: 'Joseph',
-              lastName: 'Nkomo',
-              email: 'joseph.nkomo@email.com',
-              phone: '+243901234567'
-            },
-            documents: [
-              { type: 'Acte de naissance', url: '/docs/birth_cert_1.pdf', uploadedAt: new Date() },
-              { type: 'Bulletin scolaire', url: '/docs/report_1.pdf', uploadedAt: new Date() }
-            ],
-            status: 'submitted',
-            appliedClass: '6ème A',
-            submittedAt: new Date('2024-08-20'),
+      try {
+        const response = await fetch('/api/admissions');
+        if (!response.ok) throw new Error('Failed to fetch admissions');
+        const paginatedData = await response.json();
+        
+        const appsWithMapping = paginatedData.data.map((app: any) => ({
+          id: app.id,
+          studentInfo: {
+            firstName: app.student_first_name,
+            lastName: app.student_last_name,
+            dateOfBirth: new Date(app.student_date_of_birth),
+            gender: app.student_gender
           },
-          {
-            id: '2',
-            studentInfo: {
-              firstName: 'Grace',
-              lastName: 'Mbuyi',
-              dateOfBirth: new Date('2011-07-08'),
-              gender: 'F'
-            },
-            parentInfo: {
-              firstName: 'Marie',
-              lastName: 'Mbuyi',
-              email: 'marie.mbuyi@email.com',
-              phone: '+243912345678'
-            },
-            documents: [
-              { type: 'Acte de naissance', url: '/docs/birth_cert_2.pdf', uploadedAt: new Date() },
-              { type: 'Bulletin scolaire', url: '/docs/report_2.pdf', uploadedAt: new Date() },
-              { type: 'Photo d\'identité', url: '/docs/photo_2.jpg', uploadedAt: new Date() }
-            ],
-            status: 'under_review',
-            appliedClass: '5ème B',
-            submittedAt: new Date('2024-08-18'),
-            reviewedAt: new Date('2024-08-19'),
-            reviewedBy: 'admin@smartschool.cd'
+          parentInfo: {
+            firstName: app.parent_first_name,
+            lastName: app.parent_last_name,
+            email: app.parent_email,
+            phone: app.parent_phone
           },
-          {
-            id: '3',
-            studentInfo: {
-              firstName: 'David',
-              lastName: 'Kasongo',
-              dateOfBirth: new Date('2009-11-25'),
-              gender: 'M'
-            },
-            parentInfo: {
-              firstName: 'Paul',
-              lastName: 'Kasongo',
-              email: 'paul.kasongo@email.com',
-              phone: '+243923456789'
-            },
-            documents: [
-              { type: 'Acte de naissance', url: '/docs/birth_cert_3.pdf', uploadedAt: new Date() },
-              { type: 'Bulletin scolaire', url: '/docs/report_3.pdf', uploadedAt: new Date() }
-            ],
-            status: 'accepted',
-            appliedClass: '7ème A',
-            submittedAt: new Date('2024-08-15'),
-            reviewedAt: new Date('2024-08-17'),
-            reviewedBy: 'admin@smartschool.cd',
-            notes: 'Excellent dossier académique. Admission approuvée.'
-          }
-        ];
-        setApplications(mockApplications);
+          documents: app.documents || [],
+          status: app.status,
+          appliedClass: app.applied_class,
+          submittedAt: new Date(app.created_at),
+          reviewedAt: app.reviewed_at ? new Date(app.reviewed_at) : undefined,
+          reviewedBy: app.reviewer?.email || app.reviewer_id,
+          notes: app.notes
+        }));
+
+        setApplications(appsWithMapping);
+      } catch (error) {
+        console.error('Error loading admissions:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadApplications();

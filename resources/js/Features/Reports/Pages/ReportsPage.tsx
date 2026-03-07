@@ -150,6 +150,34 @@ const ReportsPage: React.FC = () => {
     alert(`Génération du rapport en cours...\n\nLe rapport sera disponible au format PDF et Excel.`);
   };
 
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const response = await fetch('/api/reports/stats');
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const data = await response.json();
+        setStats(data);
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Chargement des rapports...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="reports-page">
       <Head title="Rapports et Statistiques" />
@@ -234,29 +262,29 @@ const ReportsPage: React.FC = () => {
           <div className="stat-card">
             <div className="stat-icon">👥</div>
             <div className="stat-info">
-              <span className="stat-value">248</span>
+              <span className="stat-value">{stats?.students?.total || 0}</span>
               <span className="stat-label">Élèves actifs</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">💰</div>
             <div className="stat-info">
-              <span className="stat-value">85%</span>
+              <span className="stat-value">{stats?.finance?.collection_rate || 0}%</span>
               <span className="stat-label">Taux de paiement</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">📚</div>
             <div className="stat-info">
-              <span className="stat-value">12</span>
+              <span className="stat-value">{stats?.students?.classes_count || 0}</span>
               <span className="stat-label">Classes actives</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">👨‍🏫</div>
             <div className="stat-info">
-              <span className="stat-value">24</span>
-              <span className="stat-label">Enseignants</span>
+              <span className="stat-value">{stats?.staff?.total || 0}</span>
+              <span className="stat-label">Utilisateurs</span>
             </div>
           </div>
         </div>

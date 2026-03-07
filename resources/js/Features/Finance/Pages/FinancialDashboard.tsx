@@ -18,53 +18,28 @@ const FinancialDashboard: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   useEffect(() => {
-    // Simulation du chargement des données de paiement
     const loadPayments = async () => {
-      setTimeout(() => {
-        const mockPayments: Payment[] = [
-          {
-            id: '1',
-            studentId: 'student1',
-            amount: 850000,
-            currency: 'CDF',
-            type: 'tuition',
-            status: 'completed',
-            paymentMethod: 'mobile_money',
-            mobileMoneyProvider: 'mpesa',
-            transactionId: 'MP12345678',
-            qrCode: 'QR_MP12345678',
-            dueDate: new Date('2024-09-15'),
-            paidAt: new Date('2024-08-20'),
-            createdAt: new Date('2024-08-01')
-          },
-          {
-            id: '2',
-            studentId: 'student2',
-            amount: 320,
-            currency: 'USD',
-            type: 'other',
-            status: 'pending',
-            paymentMethod: 'mobile_money',
-            mobileMoneyProvider: 'orange_money',
-            dueDate: new Date('2024-09-30'),
-            createdAt: new Date('2024-08-15')
-          },
-          {
-            id: '3',
-            studentId: 'student3',
-            amount: 1200000,
-            currency: 'CDF',
-            type: 'tuition',
-            status: 'completed',
-            paymentMethod: 'cash',
-            dueDate: new Date('2024-08-25'),
-            paidAt: new Date('2024-08-22'),
-            createdAt: new Date('2024-08-10')
-          }
-        ];
-        setPayments(mockPayments);
+      try {
+        const response = await fetch('/api/payments');
+        if (!response.ok) throw new Error('Failed to fetch payments');
+        const paginatedData = await response.json();
+        
+        const paymentsWithDates = paginatedData.data.map((p: any) => ({
+          ...p,
+          studentId: p.student_id,
+          paymentMethod: p.payment_method,
+          transactionId: p.transaction_id,
+          dueDate: new Date(p.due_date),
+          paidAt: p.paid_at ? new Date(p.paid_at) : undefined,
+          createdAt: new Date(p.created_at)
+        }));
+
+        setPayments(paymentsWithDates);
+      } catch (error) {
+        console.error('Error loading payments:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadPayments();
@@ -132,11 +107,38 @@ const FinancialDashboard: React.FC = () => {
 
   const stats = getPaymentStats();
 
-  const mockStudents = [
-    { id: 'student1', name: 'Marie Kalala', class: '6ème A' },
-    { id: 'student2', name: 'Jean Mukendi', class: '7ème B' },
-    { id: 'student3', name: 'Sophie Mbala', class: '5ème C' }
-  ];
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        const response = await fetch('/api/students');
+        if (response.ok) {
+          const data = await response.json();
+          setAllStudents(data.data.map((s: any) => ({
+            id: s.id.toString(),
+            name: `${s.first_name} ${s.last_name}`,
+            class: s.school_class?.name || 'Inconnue'
+          })));
+        }
+      } catch (e) { console.error(e); }
+    };
+    loadStudents();
+  }, []);
+
+  const [reportStats, setReportStats] = useState<any>(null);
+  useEffect(() => {
+    const loadReportStats = async () => {
+      try {
+        const response = await fetch('/api/reports/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setReportStats(data.finance);
+        }
+      } catch (e) { console.error(e); }
+    };
+    loadReportStats();
+  }, []);
 
   const handleAddPayment = () => {
     setEditingPayment(undefined);
@@ -283,27 +285,19 @@ const FinancialDashboard: React.FC = () => {
             <h2>Résumé Mobile Money</h2>
             <div className="provider-stats">
               <div className="provider-card">
-                <span className="provider-icon">📱</span>
+                <span className="provider-icon">💰</span>
                 <div className="provider-info">
                   <h4>M-Pesa</h4>
-                  <p>2 transactions aujourd'hui</p>
-                  <span className="provider-amount">1,170,000 CDF</span>
+                  <p>Transactions cumulées</p>
+                  <span className="provider-amount">{formatCurrency(reportStats?.by_method?.mobile_money || 0, 'CDF')}</span>
                 </div>
               </div>
               <div className="provider-card">
-                <span className="provider-icon">🧡</span>
+                <span className="provider-icon">💵</span>
                 <div className="provider-info">
-                  <h4>Orange Money</h4>
-                  <p>1 transaction en attente</p>
-                  <span className="provider-amount">$320</span>
-                </div>
-              </div>
-              <div className="provider-card">
-                <span className="provider-icon">🔴</span>
-                <div className="provider-info">
-                  <h4>Airtel Money</h4>
-                  <p>0 transaction aujourd'hui</p>
-                  <span className="provider-amount">0 CDF</span>
+                  <h4>Espèces</h4>
+                  <p>Encaissements physiques</p>
+                  <span className="provider-amount">{formatCurrency(reportStats?.by_method?.cash || 0, 'CDF')}</span>
                 </div>
               </div>
             </div>
@@ -350,8 +344,8 @@ const FinancialDashboard: React.FC = () => {
                     <div className="student-info">
                       <div className="student-avatar">👤</div>
                       <div>
-                        <p className="student-name">Élève #{payment.studentId}</p>
-                        <p className="student-class">Classe 6A</p>
+                        <p className="student-name">{payment.student?.first_name} {payment.student?.last_name}</p>
+                        <p className="student-class">{payment.student?.school_class?.name || 'N/A'}</p>
                       </div>
                     </div>
                   </div>
@@ -493,7 +487,7 @@ const FinancialDashboard: React.FC = () => {
               onSubmit={handleSubmitPayment}
               onCancel={handleCancelPaymentForm}
               mode={editingPayment ? 'edit' : 'create'}
-              students={mockStudents}
+              students={allStudents}
             />
           </div>
         </div>

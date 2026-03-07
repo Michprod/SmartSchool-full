@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import type { Student } from '../types';
 import { Head, router } from '@inertiajs/react';
 import StudentForm from '../Components/StudentForm';
@@ -17,95 +18,54 @@ const StudentManagement: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   
-  // Function to handle viewing student details
+  const [allClasses, setAllClasses] = useState<{id: string, name: string}[]>([]);
+
   const handleViewDetailsClick = (student: Student) => {
     setSelectedStudent(student);
     setShowDetails(true);
   };
 
-  useEffect(() => {
-    const loadStudents = async () => {
-      setTimeout(() => {
-        const mockStudents: Student[] = [
-          {
-            id: '1',
-            matricule: 'STU-2024-001',
-            studentNumber: 'STU-2024-001',
-            firstName: 'Marie',
-            lastName: 'Kalala',
-            dateOfBirth: new Date('2010-05-15'),
-            gender: 'F',
-            placeOfBirth: 'Kinshasa',
-            nationality: 'Congolaise (RDC)',
-            bloodGroup: 'A+',
-            city: 'Kinshasa',
-            province: 'Kinshasa',
-            classId: '6a',
-            class: '6ème A',
-            academicYear: '2024-2025',
-            parentIds: ['parent1'],
-            guardianName: 'Papa Kalala',
-            guardianPhone: '+243 998 765 432',
-            enrollmentDate: new Date('2024-01-15'),
-            isActive: true,
-            status: 'active'
-          },
-          {
-            id: '2',
-            matricule: 'STU-2024-002',
-            studentNumber: 'STU-2024-002',
-            firstName: 'Jean',
-            lastName: 'Mukendi',
-            dateOfBirth: new Date('2009-08-22'),
-            gender: 'M',
-            placeOfBirth: 'Lubumbashi',
-            nationality: 'Congolaise (RDC)',
-            city: 'Kinshasa',
-            province: 'Kinshasa',
-            classId: '7b',
-            class: '7ème B',
-            academicYear: '2024-2025',
-            parentIds: ['parent2'],
-            guardianName: 'Mama Mukendi',
-            guardianPhone: '+243 999 876 543',
-            enrollmentDate: new Date('2024-02-01'),
-            isActive: true,
-            status: 'active'
-          },
-          {
-            id: '3',
-            matricule: 'STU-2024-003',
-            studentNumber: 'STU-2024-003',
-            firstName: 'Sophie',
-            lastName: 'Mbala',
-            dateOfBirth: new Date('2011-12-10'),
-            gender: 'F',
-            placeOfBirth: 'Matadi',
-            nationality: 'Congolaise (RDC)',
-            bloodGroup: 'B+',
-            city: 'Kinshasa',
-            province: 'Kinshasa',
-            classId: '5c',
-            class: '5ème C',
-            academicYear: '2024-2025',
-            parentIds: ['parent3'],
-            guardianName: 'Tonton Mbala',
-            guardianPhone: '+243 990 765 432',
-            enrollmentDate: new Date('2024-01-20'),
-            isActive: true,
-            status: 'active'
-          }
-        ];
-        setStudents(mockStudents);
-        setLoading(false);
-      }, 1000);
-    };
+  const loadStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/students', { params: { per_page: 100 } });
+      const paginatedData = response.data;
+      
+      const mapped = paginatedData.data.map((s: any) => ({
+        ...s,
+        firstName: s.first_name,
+        lastName: s.last_name,
+        studentNumber: s.student_number || s.matricule,
+        classId: s.class_id?.toString(),
+        class: s.school_class?.name || 'Non assigné',
+        dateOfBirth: new Date(s.date_of_birth),
+        enrollmentDate: new Date(s.enrollment_date),
+        isActive: s.status === 'active',
+        status: s.status
+      }));
 
+      setStudents(mapped);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadClasses = async () => {
+    try {
+      const response = await axios.get('/api/classes');
+      setAllClasses(response.data.data || response.data);
+    } catch (e) { console.error('Error loading classes:', e); }
+  };
+
+  useEffect(() => {
     loadStudents();
+    loadClasses();
   }, []);
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = `${student.firstName} ${student.lastName}`
+    const matchesSearch = `${student.firstName} ${student.lastName} ${student.matricule}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.classId === selectedClass;
@@ -122,15 +82,6 @@ const StudentManagement: React.FC = () => {
     return age;
   };
 
-  const getClassLabel = (classId: string) => {
-    const classLabels: { [key: string]: string } = {
-      '5c': '5ème C',
-      '6a': '6ème A',
-      '7b': '7ème B'
-    };
-    return classLabels[classId] || classId;
-  };
-
   const handleAddStudent = () => {
     setEditingStudent(undefined);
     setShowForm(true);
@@ -139,45 +90,74 @@ const StudentManagement: React.FC = () => {
   const handleEditStudent = (student: Student) => {
     const formData: StudentFormData = {
       id: student.id,
-      matricule: student.studentNumber,
+      matricule: student.matricule,
       firstName: student.firstName,
       lastName: student.lastName,
       dateOfBirth: student.dateOfBirth.toISOString().split('T')[0],
       gender: student.gender,
-      placeOfBirth: '',
-      nationality: 'Congolaise (RDC)',
-      address: '',
-      city: '',
-      province: '',
-      guardianName: '',
-      guardianRelation: 'Père',
-      guardianPhone: '',
-      class: getClassLabel(student.classId),
-      academicYear: new Date().getFullYear().toString(),
+      placeOfBirth: student.placeOfBirth || '',
+      nationality: student.nationality || 'Congolaise (RDC)',
+      address: student.address || '',
+      city: student.city || 'Kinshasa',
+      province: student.province || 'Kinshasa',
+      guardianName: student.guardianName,
+      guardianRelation: student.guardianRelation || 'Père',
+      guardianPhone: student.guardianPhone,
+      class: student.classId || '',
+      academicYear: student.academicYear || new Date().getFullYear().toString(),
       admissionDate: student.enrollmentDate.toISOString().split('T')[0],
-      emergencyContact: '',
-      emergencyPhone: '',
+      emergencyContact: student.emergencyContact || student.guardianName,
+      emergencyPhone: student.guardianPhone, // Default to guardian
       hasbirthCertificate: false,
       hasVaccinationCard: false,
       hasReportCard: false,
       hasPhoto: false,
       tuitionStatus: 'unpaid',
-      status: student.isActive ? 'active' : 'inactive'
+      status: (student.status === 'suspended' ? 'inactive' : student.status) as any
     };
     setEditingStudent(formData);
     setShowForm(true);
   };
 
-  const handleSubmitStudent = (data: StudentFormData) => {
-    if (editingStudent) {
-      // Update existing student
-      console.log('Updating student:', data);
-    } else {
-      // Add new student
-      console.log('Adding new student:', data);
+  const handleSubmitStudent = async (data: StudentFormData) => {
+    try {
+      console.log('Sending student data via axios:', data);
+      const url = editingStudent ? `/api/students/${editingStudent.id}` : '/api/students';
+      const method = editingStudent ? 'put' : 'post';
+      
+      const payload = {
+        matricule: data.matricule,
+        student_number: data.matricule,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        date_of_birth: data.dateOfBirth,
+        gender: data.gender,
+        class_id: data.class, // Now sending ID
+        enrollment_date: data.admissionDate,
+        guardian_name: data.guardianName,
+        guardian_phone: data.guardianPhone,
+        status: data.status
+      };
+
+      const response = await axios({
+        method,
+        url,
+        data: payload,
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      console.log('Server response:', response.data);
+      await loadStudents();
+      setShowForm(false);
+      setEditingStudent(undefined);
+    } catch (error: any) {
+      console.error('Error saving student:', error);
+      const msg = error.response?.data?.message || error.message || 'Erreur lors du transfert';
+      alert(`Erreur: ${msg}`);
     }
-    setShowForm(false);
-    setEditingStudent(undefined);
   };
 
   const handleCancelForm = () => {
@@ -186,19 +166,21 @@ const StudentManagement: React.FC = () => {
   };
 
   const handleViewPayments = (studentId: string) => {
-    // Navigate to finance page with student filter
     router.visit(`/finance?student=${studentId}`);
   };
 
   const handleContactParent = (student: Student) => {
-    // Navigate to communication page
     router.visit(`/communication?type=parent&student=${student.id}`);
   };
 
-  const handleDeleteStudent = (studentId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élève ? Cette action est irréversible.')) {
-      setStudents(prev => prev.filter(s => s.id !== studentId));
-      console.log('Student deleted:', studentId);
+  const handleDeleteStudent = async (studentId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élève ?')) {
+      try {
+        await axios.delete(`/api/students/${studentId}`);
+        await loadStudents();
+      } catch (error) {
+        console.error('Error deleting student:', error);
+      }
     }
   };
   
@@ -251,9 +233,9 @@ const StudentManagement: React.FC = () => {
               className="class-filter"
             >
               <option value="all">Toutes les classes</option>
-              <option value="5c">5ème C</option>
-              <option value="6a">6ème A</option>
-              <option value="7b">7ème B</option>
+              {allClasses.map(cls => (
+                <option key={cls.id} value={cls.id}>{cls.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -318,7 +300,7 @@ const StudentManagement: React.FC = () => {
                 <span className="detail-icon">👥</span>
                 <div className="detail-content">
                   <span className="detail-label">Classe</span>
-                  <span className="detail-value">{getClassLabel(student.classId)}</span>
+                  <span className="detail-value">{student.class}</span>
                 </div>
               </div>
               
@@ -379,6 +361,7 @@ const StudentManagement: React.FC = () => {
           <div className="modal-content">
             <StudentForm
               initialData={editingStudent}
+              classes={allClasses} // Pass full objects
               onSubmit={handleSubmitStudent}
               onCancel={handleCancelForm}
               mode={editingStudent ? 'edit' : 'create'}

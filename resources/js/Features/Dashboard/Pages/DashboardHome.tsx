@@ -19,30 +19,23 @@ const DashboardHome: React.FC = () => {
 
   useEffect(() => {
     const loadStats = async () => {
-      setTimeout(() => {
-        const mockStats: DashboardStats = {
-          totalStudents: 1250,
-          totalTeachers: 85,
-          totalParents: 1100,
-          pendingApplications: 23,
-          totalRevenue: {
-            cdf: 45750000,
-            usd: 18500
-          },
-          pendingPayments: {
-            cdf: 8250000,
-            usd: 3200
-          },
-          recentActivities: [
-            { type: 'payment', description: 'Paiement reçu - Marie Kalala (6ème A)', timestamp: new Date(Date.now() - 15 * 60 * 1000) },
-            { type: 'registration', description: 'Nouvelle inscription - Pierre Mukendi', timestamp: new Date(Date.now() - 45 * 60 * 1000) },
-            { type: 'notification', description: 'Rappel envoyé aux parents - Réunion', timestamp: new Date(Date.now() - 120 * 60 * 1000) },
-            { type: 'payment', description: 'Paiement en retard - Jean Kabongo', timestamp: new Date(Date.now() - 180 * 60 * 1000) }
-          ]
-        };
-        setStats(mockStats);
+      try {
+        const response = await fetch('/api/reports/stats');
+        if (!response.ok) throw new Error('Failed to fetch stats');
+        const data: DashboardStats = await response.json();
+        
+        // Convert timestamp strings to Date objects
+        data.recentActivities = data.recentActivities.map(activity => ({
+          ...activity,
+          timestamp: new Date(activity.timestamp)
+        }));
+
+        setStats(data);
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadStats();

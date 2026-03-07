@@ -24,66 +24,22 @@ const EventsPage: React.FC = () => {
 
   useEffect(() => {
     const loadEvents = async () => {
-      setTimeout(() => {
-        const mockEvents: SchoolEvent[] = [
-          {
-            id: '1',
-            title: 'Réunion des Parents - 6ème Année',
-            description: 'Réunion trimestrielle pour discuter des progrès des élèves de 6ème année et planifier les activités du prochain trimestre.',
-            date: new Date('2024-02-15T14:00:00'),
-            location: 'Salle de conférence principale',
-            organizer: 'Direction Pédagogique'
-          },
-          {
-            id: '2',
-            title: 'Journée Portes Ouvertes',
-            description: 'Découvrez notre école ! Visite des installations, rencontre avec les enseignants et présentation des programmes.',
-            date: new Date('2024-02-20T09:00:00'),
-            location: 'Campus principal',
-            organizer: 'Service des Admissions',
-            media: [
-              {
-                type: 'image',
-                url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400',
-                name: 'campus-overview.jpg',
-                size: 245760
-              },
-              {
-                type: 'document',
-                url: '#',
-                name: 'programme-portes-ouvertes.pdf',
-                size: 1048576
-              }
-            ]
-          },
-          {
-            id: '3',
-            title: 'Concours de Sciences',
-            description: 'Compétition inter-classes de sciences naturelles. Les élèves présenteront leurs projets scientifiques.',
-            date: new Date('2024-02-25T10:00:00'),
-            location: 'Laboratoire de Sciences',
-            organizer: 'Département Sciences'
-          },
-          {
-            id: '4',
-            title: 'Spectacle de Fin d\'Année',
-            description: 'Représentation théâtrale et musicale préparée par les élèves de toutes les classes.',
-            date: new Date('2024-06-15T18:00:00'),
-            location: 'Auditorium',
-            organizer: 'Département Arts'
-          },
-          {
-            id: '5',
-            title: 'Formation Premiers Secours - Personnel',
-            description: 'Session de formation aux premiers secours pour tout le personnel enseignant et administratif.',
-            date: new Date('2024-01-20T08:00:00'),
-            location: 'Salle de formation',
-            organizer: 'Ressources Humaines'
-          }
-        ];
-        setEvents(mockEvents);
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('Failed to fetch events');
+        const paginatedData = await response.json();
+        
+        const eventsWithDates = paginatedData.data.map((e: any) => ({
+          ...e,
+          date: new Date(e.date)
+        }));
+
+        setEvents(eventsWithDates);
+      } catch (error) {
+        console.error('Error loading events:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadEvents();

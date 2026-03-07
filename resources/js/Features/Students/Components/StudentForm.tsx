@@ -60,6 +60,7 @@ export interface StudentFormData {
 
 interface StudentFormProps {
   initialData?: StudentFormData;
+  classes?: {id: string | number, name: string}[];
   onSubmit: (data: StudentFormData) => void;
   onCancel: () => void;
   mode?: 'create' | 'edit';
@@ -67,6 +68,7 @@ interface StudentFormProps {
 
 const StudentForm: React.FC<StudentFormProps> = ({
   initialData,
+  classes,
   onSubmit,
   onCancel,
   mode = 'create'
@@ -110,11 +112,13 @@ const StudentForm: React.FC<StudentFormProps> = ({
     'Tanganyika', 'Haut-Lomami', 'Lualaba', 'Haut-Katanga'
   ];
 
-  const classes = [
+  const defaultClasses = [
     '1ère Maternelle', '2ème Maternelle', '3ème Maternelle',
     '1ère Primaire', '2ème Primaire', '3ème Primaire', '4ème Primaire', '5ème Primaire', '6ème Primaire',
     '1ère Secondaire', '2ème Secondaire', '3ème Secondaire', '4ème Secondaire', '5ème Secondaire', '6ème Secondaire'
   ];
+
+  const availableClasses = classes && classes.length > 0 ? classes : defaultClasses.map((name, i) => ({ id: name, name }));
 
   const sections = ['Scientifique', 'Littéraire', 'Commerciale', 'Technique', 'Pédagogique'];
 
@@ -206,23 +210,43 @@ const StudentForm: React.FC<StudentFormProps> = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (photoFile) {
-      console.log('Photo file to upload:', photoFile);
-    }
+    console.log('Form submission started');
     
     // Validate all steps
-    let isValid = true;
+    let firstErrorStep = -1;
+    let allErrors: any = {};
+    
     for (let i = 1; i <= 6; i++) {
-      if (!validateStep(i)) {
-        isValid = false;
-        setCurrentStep(i);
-        break;
+      const stepErrors: any = {};
+      // Sub-validation logic to collect ALL errors
+      if (i === 1) {
+        if (!formData.matricule) stepErrors.matricule = 'Matricule requis';
+        if (!formData.firstName) stepErrors.firstName = 'Prénom requis';
+        if (!formData.lastName) stepErrors.lastName = 'Nom requis';
+        if (!formData.dateOfBirth) stepErrors.dateOfBirth = 'Date de naissance requise';
+      } else if (i === 4) {
+        if (!formData.class) stepErrors.class = 'Classe requise';
+      } else if (i === 3) {
+        if (!formData.guardianName) stepErrors.guardianName = 'Nom du tuteur requis';
+        if (!formData.guardianPhone) stepErrors.guardianPhone = 'Téléphone du tuteur requis';
+      }
+      
+      if (Object.keys(stepErrors).length > 0) {
+        if (firstErrorStep === -1) firstErrorStep = i;
+        allErrors = { ...allErrors, ...stepErrors };
       }
     }
 
-    if (isValid) {
-      onSubmit(formData);
+    if (firstErrorStep !== -1) {
+      setErrors(allErrors);
+      setCurrentStep(firstErrorStep);
+      console.log('Validation failed at step:', firstErrorStep, allErrors);
+      alert('Veuillez remplir correctement tous les champs obligatoires (indiqués par *) avant de valider.');
+      return;
     }
+
+    console.log('Validation passed, calling onSubmit', formData);
+    onSubmit(formData);
   };
 
   const renderStepIndicator = () => (
@@ -551,8 +575,8 @@ const StudentForm: React.FC<StudentFormProps> = ({
                   className={errors.class ? 'error' : ''}
                 >
                   <option value="">Sélectionner une classe</option>
-                  {classes.map(cls => (
-                    <option key={cls} value={cls}>{cls}</option>
+                  {availableClasses.map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
                   ))}
                 </select>
                 {errors.class && <span className="error-message">{errors.class}</span>}

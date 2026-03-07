@@ -18,42 +18,28 @@ const CommunicationCenter: React.FC = () => {
 
   useEffect(() => {
     const loadNotifications = async () => {
-      setTimeout(() => {
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            title: 'Réunion parents-enseignants',
-            message: 'Une réunion parents-enseignants aura lieu le 15 septembre à 14h00 en salle polyvalente.',
-            type: 'info',
-            recipients: ['parent1', 'parent2', 'parent3'],
-            sentAt: new Date('2024-08-22T10:30:00'),
-            readBy: ['parent1'],
-            channels: ['push', 'sms']
-          },
-          {
-            id: '2',
-            title: 'Rappel de paiement',
-            message: 'Votre enfant Marie Kalala a un paiement en attente. Échéance: 30 août 2024.',
-            type: 'warning',
-            recipients: ['parent1'],
-            sentAt: new Date('2024-08-20T09:00:00'),
-            readBy: ['parent1'],
-            channels: ['push', 'sms', 'email']
-          },
-          {
-            id: '3',
-            title: 'Nouvelle inscription validée',
-            message: 'Félicitations! L\'inscription de votre enfant a été validée avec succès.',
-            type: 'success',
-            recipients: ['parent3'],
-            sentAt: new Date('2024-08-18T16:45:00'),
-            readBy: ['parent3'],
-            channels: ['push', 'email']
-          }
-        ];
-        setNotifications(mockNotifications);
+      try {
+        const response = await fetch('/api/announcements');
+        if (!response.ok) throw new Error('Failed to fetch announcements');
+        const paginatedData = await response.json();
+        
+        const mappedNotifications = paginatedData.data.map((n: any) => ({
+          id: n.id.toString(),
+          title: n.title,
+          message: n.content,
+          type: n.type === 'urgent' ? 'error' : n.type,
+          recipients: n.target_audience === 'all' ? ['Tous'] : [n.target_audience],
+          sentAt: new Date(n.sent_at || n.created_at),
+          readBy: [], // Logic for read status to be implemented
+          channels: ['push']
+        }));
+
+        setNotifications(mappedNotifications);
+      } catch (error) {
+        console.error('Error loading communication data:', error);
+      } finally {
         setLoading(false);
-      }, 1000);
+      }
     };
 
     loadNotifications();
