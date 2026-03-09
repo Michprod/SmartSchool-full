@@ -98,6 +98,7 @@ export interface Payment {
   dueDate: Date;
   paidAt?: Date;
   createdAt: Date;
+  student?: any;
 }
 
 export interface Application {

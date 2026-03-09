@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import PhotoUpload from '../Components/PhotoUpload';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './UserManagement.css';
+import axios from 'axios';
 
 export interface User {
   id: string;
@@ -143,38 +144,59 @@ const UserManagement: React.FC = () => {
     setShowUserForm(true);
   };
 
-  const handleSubmitUser = (e: React.FormEvent) => {
+  const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingUser) {
-      // Update user
-      setUsers(prev => prev.map(u => 
-        u.id === editingUser.id 
-          ? { ...u, ...formData, photo: formData.photo }
-          : u
-      ));
-      console.log('User updated:', formData);
-    } else {
-      // Add new user
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+    try {
+      const payload = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
         department: formData.department,
-        status: formData.status,
-        photo: formData.photo,
-        permissions: [], // Will be determined by profileId from backend
-        createdAt: new Date()
+        status: formData.status === 'active' ? 1 : 0,
+        avatar: formData.photo // Backend should handle Base64 if sent this way, or we need to change it
       };
-      setUsers(prev => [...prev, newUser]);
-      console.log('New user added:', newUser);
+
+      if (editingUser) {
+        // Update user
+        const response = await axios.put(`/api/users/${editingUser.id}`, payload);
+        const updatedApp = response.data;
+        setUsers(prev => prev.map(u => 
+          u.id === editingUser.id 
+            ? { ...u, ...formData, photo: formData.photo }
+            : u
+        ));
+        console.log('User updated:', response.data);
+      } else {
+        // Add new user
+        // We need a password for new users? Assuming backend generates it or we need to send one
+        const response = await axios.post('/api/users', { ...payload, password: 'password123' });
+        const data = response.data.user || response.data;
+        const newUser: User = {
+          id: data.id ? data.id.toString() : `user-${Date.now()}`,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          role: formData.role,
+          department: formData.department,
+          status: formData.status,
+          photo: formData.photo,
+          permissions: [], 
+          createdAt: new Date()
+        };
+        setUsers(prev => [...prev, newUser]);
+        console.log('New user added:', response.data);
+      }
+      
+      setShowUserForm(false);
+      setEditingUser(null);
+    } catch (error: any) {
+      console.error('Error submitting user:', error.response?.data || error.message);
+      alert("Erreur lors de l'enregistrement.");
     }
-    
-    setShowUserForm(false);
-    setEditingUser(null);
   };
 
   const handleDeleteUser = (userId: string) => {

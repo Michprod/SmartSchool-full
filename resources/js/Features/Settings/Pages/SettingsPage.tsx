@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import ProfileManagement from '../Components/ProfileManagement';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './SettingsPage.css';
+import axios from 'axios';
 
 interface SchoolSettings {
   // General
@@ -100,16 +101,33 @@ const SettingsPage: React.FC = () => {
     'Lualaba', 'Haut-Katanga', 'Tanganyika', 'Haut-Lomami'
   ];
 
+  React.useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await axios.get('/api/settings');
+        if (response.data && Object.keys(response.data).length > 0) {
+          setSettings(response.data);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log('Settings saved:', settings);
-    alert('Paramètres enregistrés avec succès !');
-    setIsSaving(false);
+    try {
+      await axios.post('/api/settings', settings);
+      alert('Paramètres enregistrés avec succès !');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde des paramètres.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleExportSettings = () => {

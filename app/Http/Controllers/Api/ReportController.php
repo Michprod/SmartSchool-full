@@ -42,13 +42,22 @@ class ReportController extends Controller
                 'timestamp'   => $p->paid_at,
             ]);
 
+        $mobileMoney = fn(string $currency) => Payment::where('currency', $currency)->where('payment_method', 'mobile_money')->where('status', 'completed')->sum('amount');
+        $cash = fn(string $currency) => Payment::where('currency', $currency)->whereIn('payment_method', ['cash', 'check'])->where('status', 'completed')->sum('amount');
+
         return response()->json([
             'totalStudents'       => $totalStudents,
             'totalTeachers'       => $totalTeachers,
             'totalParents'        => $totalParents,
             'pendingApplications' => $pendingAdmissions,
-            'totalRevenue'        => ['cdf' => $revenueByStatus('CDF'), 'usd' => $revenueByStatus('USD')],
-            'pendingPayments'     => ['cdf' => $pendingByStatus('CDF'), 'usd' => $pendingByStatus('USD')],
+            'finance' => [
+                'totalRevenue'        => ['cdf' => $revenueByStatus('CDF'), 'usd' => $revenueByStatus('USD')],
+                'pendingPayments'     => ['cdf' => $pendingByStatus('CDF'), 'usd' => $pendingByStatus('USD')],
+                'by_method'           => [
+                    'mobile_money' => ['cdf' => $mobileMoney('CDF'), 'usd' => $mobileMoney('USD')],
+                    'cash'         => ['cdf' => $cash('CDF'), 'usd' => $cash('USD')]
+                ]
+            ],
             'recentActivities'    => $recentActivities,
         ]);
     }

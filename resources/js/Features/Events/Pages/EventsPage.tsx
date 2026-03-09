@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import type { SchoolEvent } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './EventsPage.css';
+import axios from 'axios';
 
 const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<SchoolEvent[]>([]);
@@ -22,26 +23,24 @@ const EventsPage: React.FC = () => {
     media: []
   });
 
+  const loadEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/events');
+      const data = response.data?.data || response.data || [];
+      const eventsWithDates = (Array.isArray(data) ? data : []).map((e: any) => ({
+        ...e,
+        date: new Date(e.date)
+      }));
+      setEvents(eventsWithDates);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        const response = await fetch('/api/events');
-        if (!response.ok) throw new Error('Failed to fetch events');
-        const paginatedData = await response.json();
-        
-        const eventsWithDates = paginatedData.data.map((e: any) => ({
-          ...e,
-          date: new Date(e.date)
-        }));
-
-        setEvents(eventsWithDates);
-      } catch (error) {
-        console.error('Error loading events:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadEvents();
   }, []);
 
@@ -61,27 +60,39 @@ const EventsPage: React.FC = () => {
   const upcomingEvents = events.filter(event => event.date > new Date());
   const pastEvents = events.filter(event => event.date <= new Date());
 
-  const handleCreateEvent = () => {
-    const eventToCreate: SchoolEvent = {
-      ...newEvent,
-      id: Date.now().toString()
-    };
-    
-    setEvents(prev => [...prev, eventToCreate]);
-    setNewEvent({
-      title: '',
-      description: '',
-      date: new Date(),
-      location: '',
-      organizer: '',
-      media: []
-    });
-    setShowCreateModal(false);
+  const handleCreateEvent = async () => {
+    try {
+      const response = await axios.post('/api/events', newEvent);
+      const createdEvent = {
+        ...response.data,
+        date: new Date(response.data.date)
+      };
+      
+      setEvents(prev => [createdEvent, ...prev]);
+      setNewEvent({
+        title: '',
+        description: '',
+        date: new Date(),
+        location: '',
+        organizer: '',
+        media: []
+      });
+      setShowCreateModal(false);
+    } catch (e: any) {
+      console.error('Error creating event:', e);
+      alert('Erreur lors de la création de l\'événement.');
+    }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = async (eventId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
-      setEvents(prev => prev.filter(event => event.id !== eventId));
+      try {
+        await axios.delete(`/api/events/${eventId}`);
+        setEvents(prev => prev.filter(event => event.id !== eventId));
+      } catch (e: any) {
+        console.error('Error deleting event:', e);
+        alert('Erreur lors de la suppression.');
+      }
     }
   };
 

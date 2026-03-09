@@ -53,7 +53,7 @@ class StudentController extends Controller
             // Optionnels
             'parent_ids' => 'nullable|array',
             'medical_info' => 'nullable|array',
-            'status' => 'string|in:active,inactive,suspended',
+            'status' => 'string|in:active,inactive,suspended,graduated,transferred,expelled',
         ]);
 
         $student = \App\Models\Student::create($validated);
@@ -85,7 +85,7 @@ class StudentController extends Controller
             'gender' => 'in:M,F',
             'class_id' => 'exists:school_classes,id',
             'enrollment_date' => 'date',
-            'status' => 'string|in:active,inactive,suspended',
+            'status' => 'string|in:active,inactive,suspended,graduated,transferred,expelled',
         ]);
 
         $student->update($validated);

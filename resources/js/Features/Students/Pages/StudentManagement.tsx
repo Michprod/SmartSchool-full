@@ -90,28 +90,28 @@ const StudentManagement: React.FC = () => {
   const handleEditStudent = (student: Student) => {
     const formData: StudentFormData = {
       id: student.id,
-      matricule: student.matricule,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      dateOfBirth: student.dateOfBirth.toISOString().split('T')[0],
-      gender: student.gender,
+      matricule: student.studentNumber || student.matricule || '',
+      firstName: student.firstName || '',
+      lastName: student.lastName || '',
+      dateOfBirth: student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split('T')[0] : '',
+      gender: student.gender || 'M',
       placeOfBirth: student.placeOfBirth || '',
       nationality: student.nationality || 'Congolaise (RDC)',
       address: student.address || '',
       city: student.city || 'Kinshasa',
       province: student.province || 'Kinshasa',
-      guardianName: student.guardianName,
+      guardianName: student.guardianName || '',
       guardianRelation: student.guardianRelation || 'Père',
-      guardianPhone: student.guardianPhone,
+      guardianPhone: student.guardianPhone || '',
       class: student.classId || '',
       academicYear: student.academicYear || new Date().getFullYear().toString(),
-      admissionDate: student.enrollmentDate.toISOString().split('T')[0],
-      emergencyContact: student.emergencyContact || student.guardianName,
-      emergencyPhone: student.guardianPhone, // Default to guardian
+      admissionDate: student.enrollmentDate ? new Date(student.enrollmentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      emergencyContact: student.emergencyContact || student.guardianName || '',
+      emergencyPhone: student.phone || student.guardianPhone || '',
       hasbirthCertificate: false,
       hasVaccinationCard: false,
       hasReportCard: false,
-      hasPhoto: false,
+      hasPhoto: !!student.photo,
       tuitionStatus: 'unpaid',
       status: (student.status === 'suspended' ? 'inactive' : student.status) as any
     };
@@ -377,6 +377,12 @@ const StudentManagement: React.FC = () => {
             <StudentDetails
               student={selectedStudent}
               onClose={() => setShowDetails(false)}
+              onEdit={(s) => {
+                setShowDetails(false);
+                handleEditStudent(s);
+              }}
+              onViewPayments={handleViewPayments}
+              onContactParent={handleContactParent}
             />
           </div>
         </div>

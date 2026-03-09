@@ -6,70 +6,65 @@ import type { PaymentFormData } from '../Components/PaymentForm';
 import PaymentReceipt from '../Components/PaymentReceipt';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './FinancialDashboard.css';
+import axios from 'axios';
 
 const FinancialDashboard: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'payments' | 'mobile-money'>('overview');
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('CDF');
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency | 'ALL'>('ALL');
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState<PaymentFormData | undefined>(undefined);
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [reportStats, setReportStats] = useState<any>(null);
+
+  const loadStats = async () => {
+    try {
+      const response = await fetch('/api/reports/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setReportStats(data.finance);
+      }
+    } catch (e) { console.error('Error loading stats:', e); }
+  };
+
+  const loadPayments = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/payments');
+      if (!response.ok) throw new Error('Failed to fetch payments');
+      const paginatedData = await response.json();
+      
+      const paymentsWithDates = paginatedData.data.map((p: any) => ({
+        ...p,
+        id: p.id.toString(),
+        studentId: p.student_id ? p.student_id.toString() : '',
+        amount: parseFloat(p.amount) || Math.round(Number(p.amount)) || 0,
+        currency: p.currency,
+        type: p.type,
+        status: p.status,
+        paymentMethod: p.payment_method,
+        mobileMoneyProvider: p.mobile_money_provider,
+        transactionId: p.transaction_id,
+        dueDate: p.due_date ? new Date(p.due_date) : new Date(),
+        paidAt: p.paid_at ? new Date(p.paid_at) : undefined,
+        createdAt: p.created_at ? new Date(p.created_at) : new Date(),
+        student: p.student
+      }));
+
+      setPayments(paymentsWithDates);
+      await loadStats();
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadPayments = async () => {
-      try {
-        const response = await fetch('/api/payments');
-        if (!response.ok) throw new Error('Failed to fetch payments');
-        const paginatedData = await response.json();
-        
-        const paymentsWithDates = paginatedData.data.map((p: any) => ({
-          ...p,
-          studentId: p.student_id,
-          paymentMethod: p.payment_method,
-          transactionId: p.transaction_id,
-          dueDate: new Date(p.due_date),
-          paidAt: p.paid_at ? new Date(p.paid_at) : undefined,
-          createdAt: new Date(p.created_at)
-        }));
-
-        setPayments(paymentsWithDates);
-      } catch (error) {
-        console.error('Error loading payments:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadPayments();
   }, []);
-
-  const getPaymentStats = () => {
-    const totalRevenue = payments
-      .filter(p => p.status === 'completed')
-      .reduce((acc, p) => {
-        if (p.currency === 'CDF') {
-          acc.cdf += p.amount;
-        } else {
-          acc.usd += p.amount;
-        }
-        return acc;
-      }, { cdf: 0, usd: 0 });
-
-    const pendingPayments = payments
-      .filter(p => p.status === 'pending')
-      .reduce((acc, p) => {
-        if (p.currency === 'CDF') {
-          acc.cdf += p.amount;
-        } else {
-          acc.usd += p.amount;
-        }
-        return acc;
-      }, { cdf: 0, usd: 0 });
-
-    return { totalRevenue, pendingPayments };
-  };
 
   const formatCurrency = (amount: number, currency: Currency) => {
     if (currency === 'CDF') {
@@ -105,8 +100,6 @@ const FinancialDashboard: React.FC = () => {
     }
   };
 
-  const stats = getPaymentStats();
-
   const [allStudents, setAllStudents] = useState<any[]>([]);
 
   useEffect(() => {
@@ -126,33 +119,46 @@ const FinancialDashboard: React.FC = () => {
     loadStudents();
   }, []);
 
-  const [reportStats, setReportStats] = useState<any>(null);
-  useEffect(() => {
-    const loadReportStats = async () => {
-      try {
-        const response = await fetch('/api/reports/stats');
-        if (response.ok) {
-          const data = await response.json();
-          setReportStats(data.finance);
-        }
-      } catch (e) { console.error(e); }
-    };
-    loadReportStats();
-  }, []);
-
   const handleAddPayment = () => {
     setEditingPayment(undefined);
     setShowPaymentForm(true);
   };
 
-  const handleSubmitPayment = (data: PaymentFormData) => {
-    if (editingPayment) {
-      console.log('Updating payment:', data);
-    } else {
-      console.log('Adding new payment:', data);
+  const handleSubmitPayment = async (data: PaymentFormData) => {
+    try {
+      if (editingPayment && editingPayment.id) {
+        console.log('Updating payment:', data);
+        const payload = {
+          amount: data.amount,
+          status: data.status,
+          transaction_id: data.transactionReference,
+          paid_at: data.status === 'completed' ? data.paymentDate : null,
+        };
+        await axios.put(`/api/payments/${editingPayment.id}`, payload);
+      } else {
+        console.log('Creating new payment:', data);
+        const payload = {
+          student_id: data.studentId,
+          amount: data.amount,
+          currency: data.currency,
+          type: data.paymentType,
+          payment_method: data.paymentMethod,
+          due_date: data.dueDate || data.paymentDate,
+          status: data.status,
+          mobile_money_provider: data.mobileMoneyProvider?.toLowerCase().replace('-', '_').replace(' ', '_'),
+          transaction_id: data.transactionReference,
+          description: data.description,
+          paid_at: data.status === 'completed' ? data.paymentDate : null,
+        };
+        await axios.post('/api/payments', payload);
+      }
+      await loadPayments();
+      setShowPaymentForm(false);
+      setEditingPayment(undefined);
+    } catch (error: any) {
+      console.error('Error submitting payment:', error.response?.data || error.message);
+      alert("Erreur lors de l'enregistrement du paiement.");
     }
-    setShowPaymentForm(false);
-    setEditingPayment(undefined);
   };
 
   const handleCancelPaymentForm = () => {
@@ -167,6 +173,7 @@ const FinancialDashboard: React.FC = () => {
 
   const handleEditPayment = (payment: Payment) => {
     const formData: PaymentFormData = {
+      id: payment.id,
       studentId: payment.studentId,
       studentName: `Student ${payment.studentId}`,
       class: '6ème A', // This should come from student data in production
@@ -254,11 +261,11 @@ const FinancialDashboard: React.FC = () => {
               <div className="currency-amounts">
                 <div className="amount-row">
                   <span className="currency">CDF</span>
-                  <span className="amount">{formatCurrency(stats.totalRevenue.cdf, 'CDF')}</span>
+                  <span className="amount">{formatCurrency(reportStats?.totalRevenue?.cdf || 0, 'CDF')}</span>
                 </div>
                 <div className="amount-row">
                   <span className="currency">USD</span>
-                  <span className="amount">{formatCurrency(stats.totalRevenue.usd, 'USD')}</span>
+                  <span className="amount">{formatCurrency(reportStats?.totalRevenue?.usd || 0, 'USD')}</span>
                 </div>
               </div>
             </div>
@@ -271,11 +278,11 @@ const FinancialDashboard: React.FC = () => {
               <div className="currency-amounts">
                 <div className="amount-row">
                   <span className="currency">CDF</span>
-                  <span className="amount">{formatCurrency(stats.pendingPayments.cdf, 'CDF')}</span>
+                  <span className="amount">{formatCurrency(reportStats?.pendingPayments?.cdf || 0, 'CDF')}</span>
                 </div>
                 <div className="amount-row">
                   <span className="currency">USD</span>
-                  <span className="amount">{formatCurrency(stats.pendingPayments.usd, 'USD')}</span>
+                  <span className="amount">{formatCurrency(reportStats?.pendingPayments?.usd || 0, 'USD')}</span>
                 </div>
               </div>
             </div>
@@ -289,7 +296,10 @@ const FinancialDashboard: React.FC = () => {
                 <div className="provider-info">
                   <h4>M-Pesa</h4>
                   <p>Transactions cumulées</p>
-                  <span className="provider-amount">{formatCurrency(reportStats?.by_method?.mobile_money || 0, 'CDF')}</span>
+                  <div className="provider-amounts-row">
+                    <span className="provider-amount">{formatCurrency(reportStats?.by_method?.mobile_money?.cdf || 0, 'CDF')}</span>
+                    <span className="provider-amount usd-amount">{formatCurrency(reportStats?.by_method?.mobile_money?.usd || 0, 'USD')}</span>
+                  </div>
                 </div>
               </div>
               <div className="provider-card">
@@ -297,7 +307,10 @@ const FinancialDashboard: React.FC = () => {
                 <div className="provider-info">
                   <h4>Espèces</h4>
                   <p>Encaissements physiques</p>
-                  <span className="provider-amount">{formatCurrency(reportStats?.by_method?.cash || 0, 'CDF')}</span>
+                  <div className="provider-amounts-row">
+                    <span className="provider-amount">{formatCurrency(reportStats?.by_method?.cash?.cdf || 0, 'CDF')}</span>
+                    <span className="provider-amount usd-amount">{formatCurrency(reportStats?.by_method?.cash?.usd || 0, 'USD')}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -313,8 +326,9 @@ const FinancialDashboard: React.FC = () => {
               <label>Devise :</label>
               <select 
                 value={selectedCurrency} 
-                onChange={(e) => setSelectedCurrency(e.target.value as Currency)}
+                onChange={(e) => setSelectedCurrency(e.target.value as Currency | 'ALL')}
               >
+                <option value="ALL">Toutes</option>
                 <option value="CDF">CDF</option>
                 <option value="USD">USD</option>
               </select>
@@ -337,7 +351,7 @@ const FinancialDashboard: React.FC = () => {
             </div>
             
             {payments
-              .filter(p => p.currency === selectedCurrency)
+              .filter(p => selectedCurrency === 'ALL' || p.currency === selectedCurrency)
               .map(payment => (
                 <div key={payment.id} className="table-row">
                   <div className="col-student">

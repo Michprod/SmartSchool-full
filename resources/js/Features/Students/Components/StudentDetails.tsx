@@ -5,9 +5,18 @@ import './StudentDetails.css';
 interface StudentDetailsProps {
   student: Student;
   onClose: () => void;
+  onEdit?: (student: Student) => void;
+  onViewPayments?: (studentId: string) => void;
+  onContactParent?: (student: Student) => void;
 }
 
-const StudentDetails: React.FC<StudentDetailsProps> = ({ student, onClose }) => {
+const StudentDetails: React.FC<StudentDetailsProps> = ({ 
+  student, 
+  onClose,
+  onEdit,
+  onViewPayments,
+  onContactParent
+}) => {
   return (
     <div className="student-details">
       <div className="details-header">
@@ -175,18 +184,24 @@ const StudentDetails: React.FC<StudentDetailsProps> = ({ student, onClose }) => 
           <button className="btn btn-outline" onClick={onClose}>
             Fermer
           </button>
-          <button className="btn btn-primary">
-            <span>✏️</span>
-            Modifier
-          </button>
-          <button className="btn btn-secondary">
-            <span>💰</span>
-            Voir Paiements
-          </button>
-          <button className="btn btn-secondary">
-            <span>📞</span>
-            Contacter Parent
-          </button>
+          {onEdit && (
+            <button className="btn btn-primary" onClick={() => onEdit(student)}>
+              <span>✏️</span>
+              Modifier
+            </button>
+          )}
+          {onViewPayments && (
+            <button className="btn btn-secondary" onClick={() => onViewPayments(student.id)}>
+              <span>💰</span>
+              Voir Paiements
+            </button>
+          )}
+          {onContactParent && (
+            <button className="btn btn-secondary" onClick={() => onContactParent(student)}>
+              <span>📞</span>
+              Contacter Parent
+            </button>
+          )}
         </div>
       </div>
     </div>

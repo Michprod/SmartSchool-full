@@ -30,7 +30,11 @@ const DashboardHome: React.FC = () => {
           timestamp: new Date(activity.timestamp)
         }));
 
-        setStats(data);
+        setStats({
+          ...data,
+          totalRevenue: (data as any).finance.totalRevenue,
+          pendingPayments: (data as any).finance.pendingPayments
+        });
       } catch (error) {
         console.error('Error loading dashboard stats:', error);
       } finally {
@@ -146,11 +150,11 @@ const DashboardHome: React.FC = () => {
             <div className="currency-amounts">
               <div className="amount-item">
                 <span className="currency">CDF</span>
-                <span className="amount">{formatCurrency(stats.totalRevenue.cdf, 'CDF')}</span>
+                <span className="amount">{formatCurrency(stats.totalRevenue?.cdf || 0, 'CDF')}</span>
               </div>
               <div className="amount-item">
                 <span className="currency">USD</span>
-                <span className="amount">{formatCurrency(stats.totalRevenue.usd, 'USD')}</span>
+                <span className="amount">{formatCurrency(stats.totalRevenue?.usd || 0, 'USD')}</span>
               </div>
             </div>
           </div>
@@ -160,11 +164,11 @@ const DashboardHome: React.FC = () => {
             <div className="currency-amounts">
               <div className="amount-item">
                 <span className="currency">CDF</span>
-                <span className="amount">{formatCurrency(stats.pendingPayments.cdf, 'CDF')}</span>
+                <span className="amount">{formatCurrency(stats.pendingPayments?.cdf || 0, 'CDF')}</span>
               </div>
               <div className="amount-item">
                 <span className="currency">USD</span>
-                <span className="amount">{formatCurrency(stats.pendingPayments.usd, 'USD')}</span>
+                <span className="amount">{formatCurrency(stats.pendingPayments?.usd || 0, 'USD')}</span>
               </div>
             </div>
           </div>

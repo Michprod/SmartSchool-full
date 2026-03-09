@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import type { InventoryItem } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './InventoryPage.css';
+import axios from 'axios';
 
 const InventoryPage: React.FC = () => {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -33,20 +34,21 @@ const InventoryPage: React.FC = () => {
     'Laboratoire'
   ];
 
-  useEffect(() => {
-    const loadInventory = async () => {
-      try {
-        const response = await fetch('/api/inventory');
-        if (!response.ok) throw new Error('Failed to fetch inventory');
-        const paginatedData = await response.json();
-        setItems(paginatedData.data);
-      } catch (error) {
-        console.error('Error loading inventory:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadInventory = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/inventory');
+      // Backend returns either an array or paginated object, robust check:
+      const data = response.data?.data || response.data || [];
+      setItems(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading inventory:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadInventory();
   }, []);
 
@@ -71,25 +73,30 @@ const InventoryPage: React.FC = () => {
     };
   };
 
-  const handleCreateItem = () => {
+  const handleCreateItem = async () => {
     if (newItem.name && newItem.category && newItem.location && newItem.quantity !== undefined) {
-      const item: InventoryItem = {
-        id: Date.now().toString(),
-        name: newItem.name,
-        category: newItem.category,
-        quantity: newItem.quantity,
-        location: newItem.location,
-        status: (newItem.status as InventoryItem['status']) || 'in_stock'
-      };
-      setItems([...items, item]);
-      setNewItem({
-        name: '',
-        category: '',
-        quantity: 0,
-        location: '',
-        status: 'in_stock'
-      });
-      setShowCreateModal(false);
+      try {
+        const itemPayload = {
+          name: newItem.name,
+          category: newItem.category,
+          quantity: newItem.quantity,
+          location: newItem.location,
+          status: newItem.status || 'in_stock'
+        };
+        const response = await axios.post('/api/inventory', itemPayload);
+        setItems([...items, response.data]);
+        setNewItem({
+          name: '',
+          category: '',
+          quantity: 0,
+          location: '',
+          status: 'in_stock'
+        });
+        setShowCreateModal(false);
+      } catch (e: any) {
+        console.error('Failed to create inventory item', e);
+        alert("Erreur lors de la création.");
+      }
     }
   };
 
@@ -99,29 +106,48 @@ const InventoryPage: React.FC = () => {
     setShowCreateModal(true);
   };
 
-  const handleUpdateItem = () => {
+  const handleUpdateItem = async () => {
     if (editingItem && newItem.name && newItem.category && newItem.location && newItem.quantity !== undefined) {
-      const updatedItems = items.map(item =>
-        item.id === editingItem.id
-          ? { ...item, ...newItem }
-          : item
-      );
-      setItems(updatedItems);
-      setEditingItem(null);
-      setNewItem({
-        name: '',
-        category: '',
-        quantity: 0,
-        location: '',
-        status: 'in_stock'
-      });
-      setShowCreateModal(false);
+      try {
+        const itemPayload = {
+          name: newItem.name,
+          category: newItem.category,
+          quantity: newItem.quantity,
+          location: newItem.location,
+          status: newItem.status
+        };
+        const response = await axios.put(`/api/inventory/${editingItem.id}`, itemPayload);
+        
+        const updatedItems = items.map(item =>
+          item.id === editingItem.id
+            ? { ...item, ...response.data }
+            : item
+        );
+        setItems(updatedItems);
+        setEditingItem(null);
+        setNewItem({
+          name: '',
+          category: '',
+          quantity: 0,
+          location: '',
+          status: 'in_stock'
+        });
+        setShowCreateModal(false);
+      } catch (e) {
+        console.error('Failed to update inventory item', e);
+        alert("Erreur lors de la mise à jour.");
+      }
     }
   };
 
-  const handleDeleteItem = (itemId: string) => {
+  const handleDeleteItem = async (itemId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élément de l\'inventaire ?')) {
-      setItems(items.filter(item => item.id !== itemId));
+      try {
+        await axios.delete(`/api/inventory/${itemId}`);
+        setItems(items.filter(item => item.id !== itemId));
+      } catch (e) {
+        console.error('Failed to delete item', e);
+      }
     }
   };
 

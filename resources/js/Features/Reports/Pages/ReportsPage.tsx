@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './ReportsPage.css';
+import axios from 'axios';
 
 interface Report {
   id: string;
@@ -156,10 +157,8 @@ const ReportsPage: React.FC = () => {
   React.useEffect(() => {
     const loadStats = async () => {
       try {
-        const response = await fetch('/api/reports/stats');
-        if (!response.ok) throw new Error('Failed to fetch stats');
-        const data = await response.json();
-        setStats(data);
+        const response = await axios.get('/api/reports/stats');
+        setStats(response.data);
       } catch (error) {
         console.error('Error loading stats:', error);
       } finally {
@@ -262,29 +261,29 @@ const ReportsPage: React.FC = () => {
           <div className="stat-card">
             <div className="stat-icon">👥</div>
             <div className="stat-info">
-              <span className="stat-value">{stats?.students?.total || 0}</span>
+              <span className="stat-value">{stats?.totalStudents || 0}</span>
               <span className="stat-label">Élèves actifs</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">💰</div>
             <div className="stat-info">
-              <span className="stat-value">{stats?.finance?.collection_rate || 0}%</span>
-              <span className="stat-label">Taux de paiement</span>
+              <span className="stat-value">{stats?.finance?.totalRevenue?.cdf || 0} CDF</span>
+              <span className="stat-label">Revenus totaux</span>
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon">📚</div>
+            <div className="stat-icon">✅</div>
             <div className="stat-info">
-              <span className="stat-value">{stats?.students?.classes_count || 0}</span>
-              <span className="stat-label">Classes actives</span>
+              <span className="stat-value">{stats?.pendingApplications || 0}</span>
+              <span className="stat-label">Admissions attente</span>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon">👨‍🏫</div>
             <div className="stat-info">
-              <span className="stat-value">{stats?.staff?.total || 0}</span>
-              <span className="stat-label">Utilisateurs</span>
+              <span className="stat-value">{stats?.totalTeachers || 0}</span>
+              <span className="stat-label">Enseignants</span>
             </div>
           </div>
         </div>

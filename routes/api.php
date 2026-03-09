@@ -33,4 +33,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Rapports & Statistiques ----
     Route::get('reports/stats', [\App\Http\Controllers\Api\ReportController::class, 'stats']);
+
+    // ---- Paramètres ----
+    Route::get('settings', [\App\Http\Controllers\SettingController::class, 'getSettings']);
+    Route::post('settings', [\App\Http\Controllers\SettingController::class, 'updateSettings']);
 });

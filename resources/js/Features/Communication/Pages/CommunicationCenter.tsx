@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import type { Notification } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './CommunicationCenter.css';
+import axios from 'axios';
 
 const CommunicationCenter: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -16,62 +17,74 @@ const CommunicationCenter: React.FC = () => {
     channels: ['push'] as ('push' | 'sms' | 'email')[]
   });
 
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('/api/announcements');
+      const data = response.data?.data || response.data || [];
+      const mappedNotifications = (Array.isArray(data) ? data : []).map((n: any) => ({
+        id: n.id.toString(),
+        title: n.title,
+        message: n.content,
+        type: n.type === 'urgent' ? 'error' : n.type,
+        recipients: n.target_audience === 'all' ? ['Tous'] : [n.target_audience],
+        sentAt: new Date(n.sent_at || n.created_at),
+        readBy: [], 
+        channels: ['push'] as ('push' | 'sms' | 'email')[]
+      }));
+      setNotifications(mappedNotifications);
+    } catch (error) {
+      console.error('Error loading communication data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const response = await fetch('/api/announcements');
-        if (!response.ok) throw new Error('Failed to fetch announcements');
-        const paginatedData = await response.json();
-        
-        const mappedNotifications = paginatedData.data.map((n: any) => ({
-          id: n.id.toString(),
-          title: n.title,
-          message: n.content,
-          type: n.type === 'urgent' ? 'error' : n.type,
-          recipients: n.target_audience === 'all' ? ['Tous'] : [n.target_audience],
-          sentAt: new Date(n.sent_at || n.created_at),
-          readBy: [], // Logic for read status to be implemented
-          channels: ['push']
-        }));
-
-        setNotifications(mappedNotifications);
-      } catch (error) {
-        console.error('Error loading communication data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadNotifications();
   }, []);
 
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simulation d'envoi
-    const notification: Notification = {
-      id: Date.now().toString(),
-      title: newNotification.title,
-      message: newNotification.message,
-      type: newNotification.type,
-      recipients: ['user1', 'user2'], // Simulation
-      sentAt: new Date(),
-      readBy: [],
-      channels: newNotification.channels
-    };
-    
-    setNotifications(prev => [notification, ...prev]);
-    
-    // Réinitialiser le formulaire
-    setNewNotification({
-      title: '',
-      message: '',
-      type: 'info',
-      recipients: 'all',
-      channels: ['push']
-    });
-    
-    alert('Notification envoyée avec succès!');
+    try {
+      const payload = {
+        title: newNotification.title,
+        message: newNotification.message,
+        type: newNotification.type,
+        channels: newNotification.channels,
+        recipients: [newNotification.recipients]
+      };
+      
+      const response = await axios.post('/api/announcements', payload);
+      const n = response.data;
+      
+      const notification: Notification = {
+        id: n.id.toString(),
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        recipients: n.recipients || [],
+        sentAt: new Date(n.created_at),
+        readBy: [],
+        channels: newNotification.channels
+      };
+      
+      setNotifications(prev => [notification, ...prev]);
+      
+      setNewNotification({
+        title: '',
+        message: '',
+        type: 'info',
+        recipients: 'all',
+        channels: ['push']
+      });
+      
+      alert('Notification envoyée avec succès!');
+    } catch (e: any) {
+      console.error('Erreur lors de l\'envoi:', e);
+      alert("Erreur lors de l'envoi de la notification.");
+    }
   };
 
   const getNotificationIcon = (type: string) => {

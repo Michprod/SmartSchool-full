@@ -58,6 +58,33 @@ class AdmissionController extends Controller
         }
 
         $admission->update($validated);
+        
+        if ($validated['status'] === 'accepted') {
+            // Check if student exists to avoid duplicates
+            if (!\App\Models\Student::where('first_name', $admission->student_first_name)->where('last_name', $admission->student_last_name)->exists()) {
+                // Determine class ID
+                $schoolClass = \App\Models\SchoolClass::where('name', $admission->applied_class)->first();
+                $classId = $schoolClass ? $schoolClass->id : (\App\Models\SchoolClass::first()->id ?? null);
+                
+                if ($classId) {
+                    \App\Models\Student::create([
+                        'first_name' => $admission->student_first_name,
+                        'last_name' => $admission->student_last_name,
+                        'date_of_birth' => $admission->student_date_of_birth,
+                        'gender' => $admission->student_gender,
+                        'guardian_name' => $admission->parent_first_name . ' ' . $admission->parent_last_name,
+                        'guardian_phone' => $admission->parent_phone,
+                        'status' => 'active',
+                        'is_active' => true,
+                        'class_id' => $classId,
+                        'enrollment_date' => now(),
+                        'matricule' => 'STU-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                        'student_number' => 'STU-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    ]);
+                }
+            }
+        }
+
         return response()->json($admission->fresh('reviewer'));
     }
 

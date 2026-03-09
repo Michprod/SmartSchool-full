@@ -1,0 +1,17 @@
+APP_NAME=SmartSchool
+APP_ENV=production
+APP_KEY=base64:6LfrUCgGL4+hVJjAmhZ8iOpsa2oxadeDyudFom7/YwbY=
+APP_DEBUG=false
+APP_URL=https://plum-gerbil-537001.hostingersite.com
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=u257189575_smartschool
+DB_USERNAME=u257189575_admin
+DB_PASSWORD="16v5X*JjP8>"
+
+LOG_CHANNEL=stack
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=database

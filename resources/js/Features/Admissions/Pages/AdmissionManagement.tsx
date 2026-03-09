@@ -5,6 +5,7 @@ import ApplicationForm from '../Components/ApplicationForm';
 import type { ApplicationFormData } from '../Components/ApplicationForm';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import './AdmissionManagement.css';
+import axios from 'axios';
 
 const AdmissionManagement: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -16,9 +17,8 @@ const AdmissionManagement: React.FC = () => {
   useEffect(() => {
     const loadApplications = async () => {
       try {
-        const response = await fetch('/api/admissions');
-        if (!response.ok) throw new Error('Failed to fetch admissions');
-        const paginatedData = await response.json();
+        const response = await axios.get('/api/admissions');
+        const paginatedData = response.data;
         
         const appsWithMapping = paginatedData.data.map((app: any) => ({
           id: app.id,
@@ -84,17 +84,25 @@ const AdmissionManagement: React.FC = () => {
     return applications.filter(app => app.status === status).length;
   };
 
-  const handleStatusChange = (applicationId: string, newStatus: string) => {
-    setApplications(prev => prev.map(app => 
-      app.id === applicationId 
-        ? { 
-            ...app, 
-            status: newStatus as any,
-            reviewedAt: new Date(),
-            reviewedBy: 'admin@smartschool.cd'
-          }
-        : app
-    ));
+  const handleStatusChange = async (applicationId: string, newStatus: string) => {
+    try {
+      const response = await axios.put(`/api/admissions/${applicationId}`, { status: newStatus });
+      const app = response.data;
+      
+      setApplications(prev => prev.map(a => 
+        a.id === applicationId 
+          ? { 
+              ...a, 
+              status: app.status as any,
+              reviewedAt: app.reviewed_at ? new Date(app.reviewed_at) : new Date(),
+              reviewedBy: app.reviewer?.email || app.reviewer_id || 'admin@smartschool.cd',
+            }
+          : a
+      ));
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors du changement de statut.");
+    }
   };
 
   const handleAddApplication = () => {
@@ -102,14 +110,73 @@ const AdmissionManagement: React.FC = () => {
     setShowApplicationForm(true);
   };
 
-  const handleSubmitApplication = (data: ApplicationFormData) => {
-    if (editingApplication) {
-      console.log('Updating application:', data);
-    } else {
-      console.log('Adding new application:', data);
+  const handleSubmitApplication = async (data: ApplicationFormData) => {
+    try {
+      if (editingApplication && editingApplication.id) {
+        console.log('Updating application:', data);
+        const payload = {
+          status: data.status === 'pending' ? 'submitted' : data.status,
+          notes: data.notes || '',
+        };
+        const response = await axios.put(`/api/admissions/${editingApplication.id}`, payload);
+        const app = response.data;
+        
+        setApplications(prev => prev.map(a => 
+          a.id === app.id
+            ? {
+                ...a,
+                status: app.status,
+                notes: app.notes,
+                reviewedAt: app.reviewed_at ? new Date(app.reviewed_at) : undefined,
+                reviewedBy: app.reviewer?.email || app.reviewer_id,
+              }
+            : a
+        ));
+      } else {
+        const payload = {
+          student_first_name: data.firstName,
+          student_last_name: data.lastName,
+          student_date_of_birth: data.dateOfBirth,
+          student_gender: data.gender,
+          parent_first_name: data.parentName.split(' ')[0] || '',
+          parent_last_name: data.parentName.split(' ').slice(1).join(' ') || '',
+          parent_email: data.parentEmail || 'noemail@example.com',
+          parent_phone: data.parentPhone,
+          applied_class: data.appliedClass,
+          documents: [],
+          notes: data.notes || '',
+        };
+        console.log('Adding new application:', payload);
+        const response = await axios.post('/api/admissions', payload);
+        const app = response.data;
+        
+        const newApplication: Application = {
+          id: app.id,
+          studentInfo: {
+            firstName: app.student_first_name,
+            lastName: app.student_last_name,
+            dateOfBirth: new Date(app.student_date_of_birth),
+            gender: app.student_gender
+          },
+          parentInfo: {
+            firstName: app.parent_first_name,
+            lastName: app.parent_last_name,
+            email: app.parent_email,
+            phone: app.parent_phone
+          },
+          documents: app.documents || [],
+          status: app.status,
+          appliedClass: app.applied_class,
+          submittedAt: new Date(app.created_at)
+        };
+        setApplications(prev => [newApplication, ...prev]);
+      }
+      setShowApplicationForm(false);
+      setEditingApplication(undefined);
+    } catch (error: any) {
+      console.error('Error submitting application:', error.response?.data || error.message);
+      alert("Erreur lors de l'enregistrement, veuillez vérifier les informations saisies.");
     }
-    setShowApplicationForm(false);
-    setEditingApplication(undefined);
   };
 
   const handleCancelApplicationForm = () => {
