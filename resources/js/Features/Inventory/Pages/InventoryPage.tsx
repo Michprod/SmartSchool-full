@@ -52,13 +52,19 @@ const InventoryPage: React.FC = () => {
     loadInventory();
   }, []);
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.location.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredItems = (items || []).filter(item => {
+    if (!item) return false;
+    const name = item.name || '';
+    const category = item.category || '';
+    const location = item.location || '';
+    const status = item.status || '';
+
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         location.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
+    const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
+    const matchesStatus = selectedStatus === 'all' || status === selectedStatus;
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
