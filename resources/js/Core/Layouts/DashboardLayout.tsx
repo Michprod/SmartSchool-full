@@ -19,7 +19,17 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
     };
 
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // Load html2pdf.js for receipt generation
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.body.removeChild(script);
+    };
   }, []);
 
   return (

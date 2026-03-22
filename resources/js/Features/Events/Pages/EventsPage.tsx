@@ -60,15 +60,38 @@ const EventsPage: React.FC = () => {
   const upcomingEvents = events.filter(event => event.date > new Date());
   const pastEvents = events.filter(event => event.date <= new Date());
 
-  const handleCreateEvent = async () => {
+  const handleEditEvent = (event: SchoolEvent) => {
+    setSelectedEvent(event);
+    setNewEvent({
+      ...event,
+      date: new Date(event.date)
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleSaveEvent = async () => {
     try {
-      const response = await axios.post('/api/events', newEvent);
-      const createdEvent = {
+      const isEditing = !!(newEvent as any).id;
+      const url = isEditing ? `/api/events/${(newEvent as any).id}` : '/api/events';
+      const method = isEditing ? 'put' : 'post';
+      
+      const response = await axios({
+        method,
+        url,
+        data: newEvent
+      });
+      
+      const savedEvent = {
         ...response.data,
         date: new Date(response.data.date)
       };
       
-      setEvents(prev => [createdEvent, ...prev]);
+      if (isEditing) {
+        setEvents(prev => prev.map(e => e.id === savedEvent.id ? savedEvent : e));
+      } else {
+        setEvents(prev => [savedEvent, ...prev]);
+      }
+      
       setNewEvent({
         title: '',
         description: '',
@@ -79,8 +102,8 @@ const EventsPage: React.FC = () => {
       });
       setShowCreateModal(false);
     } catch (e: any) {
-      console.error('Error creating event:', e);
-      alert('Erreur lors de la création de l\'événement.');
+      console.error('Error saving event:', e);
+      alert('Erreur lors de l\'enregistrement de l\'événement.');
     }
   };
 
@@ -303,7 +326,10 @@ const EventsPage: React.FC = () => {
                 <span>👁️</span>
                 Voir
               </button>
-              <button className="action-btn secondary">
+              <button 
+                className="action-btn secondary"
+                onClick={() => handleEditEvent(event)}
+              >
                 <span>✏️</span>
                 Modifier
               </button>
@@ -350,7 +376,7 @@ const EventsPage: React.FC = () => {
             
             <form onSubmit={(e) => {
               e.preventDefault();
-              handleCreateEvent();
+              handleSaveEvent();
             }}>
               <div className="form-group">
                 <label>Titre de l'événement *</label>
@@ -465,7 +491,7 @@ const EventsPage: React.FC = () => {
                   Annuler
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Créer l'Événement
+                  {(newEvent as any).id ? 'Enregistrer les modifications' : 'Créer l\'Événement'}
                 </button>
               </div>
             </form>
@@ -564,7 +590,13 @@ const EventsPage: React.FC = () => {
             </div>
             
             <div className="modal-actions">
-              <button className="btn btn-outline">
+              <button 
+                className="btn btn-outline"
+                onClick={() => {
+                  setShowEventModal(false);
+                  handleEditEvent(selectedEvent);
+                }}
+              >
                 <span>✏️</span>
                 Modifier
               </button>

@@ -180,11 +180,11 @@ const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ receipt, onClose, onPri
           <button className="btn btn-secondary" onClick={onClose}>
             Fermer
           </button>
-          <button className="btn btn-primary" onClick={handlePrint}>
-            🖨️ Imprimer
+          <button className="btn btn-outline" onClick={handleDownloadPDF}>
+            <span>⬇️</span> PDF
           </button>
-          <button className="btn btn-primary" onClick={handleDownloadPDF}>
-            📄 Télécharger PDF
+          <button className="btn btn-primary" onClick={handlePrint}>
+            <span>🖨️</span> Imprimer
           </button>
         </div>
       </div>
