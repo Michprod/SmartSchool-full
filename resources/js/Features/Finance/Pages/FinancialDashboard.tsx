@@ -64,6 +64,24 @@ const FinancialDashboard: React.FC = () => {
 
   useEffect(() => {
     loadPayments();
+    
+    // Handle query parameters (e.g., from Student Details)
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('student');
+    if (studentId) {
+      setActiveTab('payments');
+      // We wait for allStudents to be loaded or we just set the form data
+      setEditingPayment({
+        studentId: studentId,
+        amount: 0,
+        currency: 'USD',
+        paymentType: 'tuition',
+        paymentMethod: 'cash',
+        paymentDate: new Date().toISOString().split('T')[0],
+        status: 'pending'
+      } as any);
+      setShowPaymentForm(true);
+    }
   }, []);
 
   const formatCurrency = (amount: number, currency: Currency) => {

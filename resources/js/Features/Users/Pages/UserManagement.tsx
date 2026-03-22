@@ -199,9 +199,15 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      try {
+        await axios.delete(`/api/users/${userId}`);
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        alert("Erreur lors de la suppression.");
+      }
     }
   };
 

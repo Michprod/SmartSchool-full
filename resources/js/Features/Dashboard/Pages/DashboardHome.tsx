@@ -201,15 +201,15 @@ const DashboardHome: React.FC = () => {
             <span className="action-icon">➕</span>
             <span>Nouvel Élève</span>
           </button>
-          <button className="action-btn secondary">
+          <button className="action-btn secondary" onClick={() => router.visit('/finance')}>
             <span className="action-icon">💰</span>
             <span>Enregistrer Paiement</span>
           </button>
-          <button className="action-btn secondary">
+          <button className="action-btn secondary" onClick={() => router.visit('/communication')}>
             <span className="action-icon">📢</span>
             <span>Envoyer Notification</span>
           </button>
-          <button className="action-btn secondary">
+          <button className="action-btn secondary" onClick={() => router.visit('/reports')}>
             <span className="action-icon">📊</span>
             <span>Générer Rapport</span>
           </button>

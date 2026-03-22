@@ -42,6 +42,21 @@ const CommunicationCenter: React.FC = () => {
 
   useEffect(() => {
     loadNotifications();
+    
+    // Handle query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = urlParams.get('student');
+    const type = urlParams.get('type');
+    
+    if (studentId && type === 'parent') {
+      setActiveTab('send');
+      setNewNotification(prev => ({
+        ...prev,
+        recipients: 'parents',
+        title: 'Communication concernant l\'élève (ID: ' + studentId + ')',
+        message: 'Bonjour, nous souhaitons vous informer que...'
+      }));
+    }
   }, []);
 
   const handleSendNotification = async (e: React.FormEvent) => {
