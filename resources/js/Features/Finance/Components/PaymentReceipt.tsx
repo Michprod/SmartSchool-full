@@ -51,8 +51,24 @@ const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ receipt, onClose, onPri
   };
 
   const handleDownloadPDF = () => {
-    // In production, use a library like jsPDF or html2pdf
-    alert('Fonctionnalité PDF en cours de développement');
+    const element = document.querySelector('.receipt-container');
+    if (!element) return;
+    
+    const opt = {
+      margin:       10,
+      filename:     `Recu_${receipt.receiptNumber}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // @ts-ignore
+    if (window.html2pdf) {
+      // @ts-ignore
+      window.html2pdf().set(opt).from(element).save();
+    } else {
+      alert("Le module PDF est en cours de chargement... Réessayez dans quelques secondes.");
+    }
   };
 
   return (
