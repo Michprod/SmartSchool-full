@@ -38,7 +38,7 @@ interface PaymentFormProps {
   onSubmit: (data: PaymentFormData) => void;
   onCancel: () => void;
   mode?: 'create' | 'edit';
-  students?: Array<{ id: string; name: string; class: string }>;
+  students?: Array<{ id: string; name: string; class: string; photo?: string; matricule?: string }>;
 }
 
 const PaymentForm: React.FC<PaymentFormProps> = ({
@@ -153,15 +153,29 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               {errors.studentId && <span className="error-message">{errors.studentId}</span>}
             </div>
 
-            <div className="form-group">
-              <label>Classe</label>
-              <input
-                type="text"
-                value={formData.class}
-                disabled
-                className="readonly-field"
-              />
-            </div>
+            {/* Student Preview Section */}
+            {formData.studentId && (
+              <div className="student-preview-card">
+                <div className="student-preview-avatar">
+                  {students.find(s => s.id === formData.studentId)?.photo ? (
+                    <img 
+                      src={students.find(s => s.id === formData.studentId)?.photo?.startsWith('data:') 
+                        ? students.find(s => s.id === formData.studentId)?.photo 
+                        : `/storage/${students.find(s => s.id === formData.studentId)?.photo}`
+                      } 
+                      alt="Student" 
+                    />
+                  ) : (
+                    <div className="avatar-placeholder">👤</div>
+                  )}
+                </div>
+                <div className="student-preview-info">
+                  <h4>{formData.studentName}</h4>
+                  <p><strong>Classe:</strong> {formData.class}</p>
+                  <p><strong>Matricule:</strong> {students.find(s => s.id === formData.studentId)?.matricule || formData.studentId}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

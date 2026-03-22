@@ -111,7 +111,9 @@ const FinancialDashboard: React.FC = () => {
           setAllStudents(data.data.map((s: any) => ({
             id: s.id.toString(),
             name: `${s.first_name} ${s.last_name}`,
-            class: s.school_class?.name || 'Inconnue'
+            class: s.school_class?.name || 'Inconnue',
+            photo: s.photo,
+            matricule: s.matricule
           })));
         }
       } catch (e) { console.error(e); }
@@ -514,9 +516,9 @@ const FinancialDashboard: React.FC = () => {
             id: selectedPayment.id,
             receiptNumber: `REC-${selectedPayment.id.slice(0, 8).toUpperCase()}`,
             date: selectedPayment.paidAt || selectedPayment.createdAt,
-            studentName: `Élève ${selectedPayment.studentId}`,
-            studentId: selectedPayment.studentId,
-            studentClass: '6ème A',
+            studentName: selectedPayment.student ? `${selectedPayment.student.first_name} ${selectedPayment.student.last_name}` : `Élève ${selectedPayment.studentId}`,
+            studentId: selectedPayment.student?.matricule || selectedPayment.studentId,
+            studentClass: selectedPayment.student?.school_class?.name || 'N/A',
             paymentType: selectedPayment.type === 'tuition' ? 'Scolarité' : 'Frais divers',
             amount: selectedPayment.amount,
             currency: selectedPayment.currency,
