@@ -32,7 +32,7 @@ class PaymentController extends Controller
             'amount'               => 'required|numeric|min:0',
             'currency'             => 'required|in:CDF,USD',
             'type'                 => 'required|in:tuition,registration,exam,uniform,transport,meal,other',
-            'payment_method'       => 'required|in:mobile_money,cash,bank_transfer',
+            'payment_method'       => 'required|in:mobile_money,cash,bank_transfer,check',
             'due_date'             => 'required|date',
             'status'               => 'sometimes|in:pending,completed,failed,refunded',
             'mobile_money_provider'=> 'nullable|string',

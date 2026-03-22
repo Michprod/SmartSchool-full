@@ -28,10 +28,18 @@ class UserController extends Controller
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users',
             'password'   => 'required|string|min:8',
-            'role'       => 'required|in:admin,teacher,parent,student',
+            'role'       => 'required|in:admin,teacher,parent,student,director,accountant,secretary',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',
         ]);
+        
+        if (!empty($validated['avatar']) && preg_match('/^data:image\/(\w+);base64,/', $validated['avatar'])) {
+            $data = substr($validated['avatar'], strpos($validated['avatar'], ',') + 1);
+            $data = base64_decode($data);
+            $imageName = 'avatar_' . time() . '_' . uniqid() . '.png';
+            \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/' . $imageName, $data);
+            $validated['avatar'] = 'avatars/' . $imageName;
+        }
         $validated['password'] = Hash::make($validated['password']);
 
         $user = User::create($validated);
@@ -50,12 +58,20 @@ class UserController extends Controller
             'first_name' => 'string|max:255',
             'last_name'  => 'string|max:255',
             'email'      => 'email|unique:users,email,' . $id,
-            'role'       => 'in:admin,teacher,parent,student',
+            'role'       => 'in:admin,teacher,parent,student,director,accountant,secretary',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',
             'is_active'  => 'boolean',
             'password'   => 'nullable|string|min:8',
         ]);
+        
+        if (!empty($validated['avatar']) && preg_match('/^data:image\/(\w+);base64,/', $validated['avatar'])) {
+            $data = substr($validated['avatar'], strpos($validated['avatar'], ',') + 1);
+            $data = base64_decode($data);
+            $imageName = 'avatar_' . time() . '_' . uniqid() . '.png';
+            \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/' . $imageName, $data);
+            $validated['avatar'] = 'avatars/' . $imageName;
+        }
         if (isset($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         }
