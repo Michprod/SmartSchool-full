@@ -115,7 +115,8 @@ const StudentForm: React.FC<StudentFormProps> = ({
   const defaultClasses = [
     '1ère Maternelle', '2ème Maternelle', '3ème Maternelle',
     '1ère Primaire', '2ème Primaire', '3ème Primaire', '4ème Primaire', '5ème Primaire', '6ème Primaire',
-    '1ère Secondaire', '2ème Secondaire', '3ème Secondaire', '4ème Secondaire', '5ème Secondaire', '6ème Secondaire'
+    '7ème Éducation de Base', '8ème Éducation de Base', 
+    '1ère Humanités', '2ème Humanités', '3ème Humanités', '4ème Humanités'
   ];
 
   const availableClasses = classes && classes.length > 0 ? classes : defaultClasses.map((name, i) => ({ id: name, name }));

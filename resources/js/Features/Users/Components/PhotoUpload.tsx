@@ -10,6 +10,7 @@ export interface PhotoUploadProps {
   label?: string;
   shape?: 'circle' | 'square';
   required?: boolean;
+  disabled?: boolean;
 }
 
 const PhotoUpload: React.FC<PhotoUploadProps> = ({
@@ -19,7 +20,8 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
   maxSizeMB = 5,
   label = 'Photo de profil',
   shape = 'circle',
-  required = false
+  required = false,
+  disabled = false
 }) => {
   const [preview, setPreview] = useState<string>(currentPhoto || '');
   const [error, setError] = useState<string>('');
@@ -102,18 +104,19 @@ const PhotoUpload: React.FC<PhotoUploadProps> = ({
   };
 
   return (
-    <div className="photo-upload">
+    <div className={`photo-upload ${disabled ? 'disabled' : ''}`}>
       <label className="photo-upload-label">
         {label}
         {required && <span className="required">*</span>}
       </label>
 
       <div
-        className={`photo-upload-container ${shape} ${isDragging ? 'dragging' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={handleClick}
+        className={`photo-upload-container ${shape} ${isDragging ? 'dragging' : ''} ${disabled ? 'disabled' : ''}`}
+        onDragOver={disabled ? undefined : handleDragOver}
+        onDragLeave={disabled ? undefined : handleDragLeave}
+        onDrop={disabled ? undefined : handleDrop}
+        onClick={disabled ? undefined : handleClick}
+        style={disabled ? { cursor: 'not-allowed', opacity: 0.6 } : {}}
       >
         {preview ? (
           <div className="photo-preview">

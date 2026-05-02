@@ -45,6 +45,17 @@
   transform: scale(1.02);
 }
 
+.photo-upload-container.disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.photo-upload.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
 .photo-placeholder {
   display: flex;
   flex-direction: column;

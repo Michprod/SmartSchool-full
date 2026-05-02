@@ -51,14 +51,21 @@ const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ receipt, onClose, onPri
   };
 
   const handleDownloadPDF = () => {
-    const element = document.querySelector('.receipt-container');
+    const element = receiptRef.current;
     if (!element) return;
     
     const opt = {
       margin:       10,
       filename:     `Recu_${receipt.receiptNumber}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2 },
+      html2canvas:  { 
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        scrollY: 0,
+        scrollX: 0
+      },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     

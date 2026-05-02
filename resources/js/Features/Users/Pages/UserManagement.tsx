@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import PhotoUpload from '../Components/PhotoUpload';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './UserManagement.css';
 import axios from 'axios';
+import PhotoUpload from '../Components/PhotoUpload';
 
 export interface User {
   id: string;
@@ -27,6 +28,15 @@ const UserManagement: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole]);
 
   // User Form State
   const [formData, setFormData] = useState({
@@ -38,8 +48,11 @@ const UserManagement: React.FC = () => {
     profileId: '',
     department: '',
     status: 'active' as User['status'],
-    photo: ''
+    photo: '',
+    password: ''
   });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   
@@ -47,13 +60,18 @@ const UserManagement: React.FC = () => {
   console.log('Photo file state:', photoFile);
 
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Failed to fetch users');
-        const paginatedData = await response.json();
-        
-        const mappedUsers = paginatedData.data.map((u: any) => ({
+        setLoading(true);
+        // Fetch users and roles in parallel
+        const [usersRes, rolesRes] = await Promise.all([
+          axios.get('/api/users'),
+          axios.get('/api/roles')
+        ]);
+
+        // Map users
+        const userData = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data.data || []);
+        const mappedUsers = userData.map((u: any) => ({
           id: u.id.toString(),
           firstName: u.first_name,
           lastName: u.last_name,
@@ -61,22 +79,23 @@ const UserManagement: React.FC = () => {
           phone: u.phone,
           role: u.role,
           status: u.is_active ? 'active' : 'inactive',
-          photo: u.avatar,
+          photo: u.avatar ? (u.avatar.startsWith('http') ? u.avatar : `/storage/${u.avatar}`) : undefined,
           department: u.department,
-          permissions: [], // Permissions logic to follow
+          permissions: Array.isArray(u.permissions) ? u.permissions : [],
           createdAt: new Date(u.created_at),
           lastLogin: u.last_login ? new Date(u.last_login) : undefined
         }));
 
         setUsers(mappedUsers);
+        setAvailableRoles(rolesRes.data);
       } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    loadUsers();
+    loadData();
   }, []);
 
   const roleLabels: Record<User['role'], string> = {
@@ -111,6 +130,10 @@ const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+
   const handleAddUser = () => {
     setEditingUser(null);
     setFormData({
@@ -122,9 +145,11 @@ const UserManagement: React.FC = () => {
       profileId: '',
       department: '',
       status: 'active',
-      photo: ''
+      photo: '',
+      password: ''
     });
     setPhotoFile(null);
+    setFormErrors({});
     setShowUserForm(true);
   };
 
@@ -146,34 +171,49 @@ const UserManagement: React.FC = () => {
 
   const handleSubmitUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormErrors({});
     
     try {
-      const payload = {
+      const payload: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         role: formData.role,
         department: formData.department,
-        status: formData.status === 'active' ? 1 : 0,
-        avatar: formData.photo // Backend should handle Base64 if sent this way, or we need to change it
+        is_active: formData.status === 'active',
+        avatar: formData.photo
       };
+
+      // Only include password for new users or if provided
+      if (!editingUser || formData.password) {
+        payload.password = formData.password || 'password123';
+      }
 
       if (editingUser) {
         // Update user
         const response = await axios.put(`/api/users/${editingUser.id}`, payload);
-        const updatedApp = response.data;
+        const updatedUser = response.data;
+        
         setUsers(prev => prev.map(u => 
           u.id === editingUser.id 
-            ? { ...u, ...formData, photo: formData.photo }
+            ? { 
+                ...u, 
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                role: formData.role,
+                department: formData.department,
+                status: formData.status,
+                photo: updatedUser.avatar ? (updatedUser.avatar.startsWith('http') ? updatedUser.avatar : `/storage/${updatedUser.avatar}`) : formData.photo
+              }
             : u
         ));
-        console.log('User updated:', response.data);
       } else {
         // Add new user
-        // We need a password for new users? Assuming backend generates it or we need to send one
-        const response = await axios.post('/api/users', { ...payload, password: 'password123' });
-        const data = response.data.user || response.data;
+        const response = await axios.post('/api/users', payload);
+        const data = response.data;
         const newUser: User = {
           id: data.id ? data.id.toString() : `user-${Date.now()}`,
           firstName: formData.firstName,
@@ -183,19 +223,27 @@ const UserManagement: React.FC = () => {
           role: formData.role,
           department: formData.department,
           status: formData.status,
-          photo: formData.photo,
-          permissions: [], 
+          photo: data.avatar ? (data.avatar.startsWith('http') ? data.avatar : `/storage/${data.avatar}`) : formData.photo,
+          permissions: data.permissions || [], 
           createdAt: new Date()
         };
         setUsers(prev => [...prev, newUser]);
-        console.log('New user added:', response.data);
       }
       
       setShowUserForm(false);
       setEditingUser(null);
     } catch (error: any) {
-      console.error('Error submitting user:', error.response?.data || error.message);
-      alert("Erreur lors de l'enregistrement.");
+      console.error('Error submitting user:', error);
+      if (error.response?.data?.errors) {
+        // Handle validation errors
+        const errors: Record<string, string> = {};
+        Object.entries(error.response.data.errors).forEach(([key, messages]) => {
+          errors[key] = Array.isArray(messages) ? messages[0] : String(messages);
+        });
+        setFormErrors(errors);
+      } else {
+        alert(error.response?.data?.message || "Erreur lors de l'enregistrement.");
+      }
     }
   };
 
@@ -204,9 +252,9 @@ const UserManagement: React.FC = () => {
       try {
         await axios.delete(`/api/users/${userId}`);
         setUsers(prev => prev.filter(u => u.id !== userId));
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error deleting user:', error);
-        alert("Erreur lors de la suppression.");
+        alert(error.response?.data?.message || "Erreur lors de la suppression.");
       }
     }
   };
@@ -274,8 +322,8 @@ const UserManagement: React.FC = () => {
           className="filter-select"
         >
           <option value="all">Tous les rôles</option>
-          {Object.entries(roleLabels).map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
+          {availableRoles.map((role) => (
+            <option key={role.slug} value={role.slug}>{role.name}</option>
           ))}
         </select>
       </div>
@@ -295,7 +343,7 @@ const UserManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(user => (
+            {currentUsers.map(user => (
               <tr key={user.id}>
                 <td>
                   <div className="user-info">
@@ -321,7 +369,9 @@ const UserManagement: React.FC = () => {
                   </div>
                 </td>
                 <td>
-                  <span className="role-badge">{roleLabels[user.role]}</span>
+                  <span className="role-badge">
+                    {availableRoles.find(r => r.slug === user.role)?.name || user.role}
+                  </span>
                 </td>
                 <td>{user.department || '—'}</td>
                 <td>
@@ -360,6 +410,12 @@ const UserManagement: React.FC = () => {
             ))}
           </tbody>
         </table>
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={filteredUsers.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {filteredUsers.length === 0 && (
@@ -420,6 +476,7 @@ const UserManagement: React.FC = () => {
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     required
                   />
+                  {formErrors.email && <span className="error-text">{formErrors.email}</span>}
                 </div>
                 <div className="form-group">
                   <label>Téléphone <span className="required">*</span></label>
@@ -430,8 +487,27 @@ const UserManagement: React.FC = () => {
                     placeholder="+243 XX XXX XXXX"
                     required
                   />
+                  {formErrors.phone && <span className="error-text">{formErrors.phone}</span>}
                 </div>
               </div>
+
+              {!editingUser && (
+                <div className="form-group">
+                  <label>Mot de passe <span className="required">*</span></label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    placeholder="Minimum 8 caractères"
+                    required={!editingUser}
+                    minLength={8}
+                  />
+                  {formErrors.password && <span className="error-text">{formErrors.password}</span>}
+                  <small className="help-text">
+                    💡 Un mot de passe par défaut sera utilisé si non spécifié
+                  </small>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Profil d'accès <span className="required">*</span></label>
@@ -442,18 +518,19 @@ const UserManagement: React.FC = () => {
                     setFormData({
                       ...formData, 
                       profileId: profileId,
-                      role: profileId as User['role'] // Auto-assign role based on profile
+                      role: profileId as User['role'] 
                     });
                   }}
                   required
                 >
                   <option value="">Sélectionner un profil...</option>
-                  {availableProfiles.map(profile => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.name} - {profile.description}
+                  {availableRoles.map(role => (
+                    <option key={role.slug} value={role.slug}>
+                      {role.name} - {role.description}
                     </option>
                   ))}
                 </select>
+                {formErrors.role && <span className="error-text">{formErrors.role}</span>}
                 <small className="help-text">
                   💡 Les profils définissent les permissions. Gérez-les dans <strong>Paramètres → Profils & Permissions</strong>
                 </small>

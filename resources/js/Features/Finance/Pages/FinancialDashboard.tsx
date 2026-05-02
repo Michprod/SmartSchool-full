@@ -5,6 +5,7 @@ import PaymentForm from '../Components/PaymentForm';
 import type { PaymentFormData } from '../Components/PaymentForm';
 import PaymentReceipt from '../Components/PaymentReceipt';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './FinancialDashboard.css';
 import axios from 'axios';
 
@@ -18,6 +19,14 @@ const FinancialDashboard: React.FC = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [reportStats, setReportStats] = useState<any>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCurrency, activeTab]);
 
   const loadStats = async () => {
     try {
@@ -359,78 +368,95 @@ const FinancialDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="payments-table">
-            <div className="table-header">
-              <div className="col-student">Élève</div>
-              <div className="col-amount">Montant</div>
-              <div className="col-type">Type</div>
-              <div className="col-method">Méthode</div>
-              <div className="col-status">Statut</div>
-              <div className="col-date">Date</div>
-              <div className="col-actions">Actions</div>
-            </div>
-            
-            {payments
-              .filter(p => selectedCurrency === 'ALL' || p.currency === selectedCurrency)
-              .map(payment => (
-                <div key={payment.id} className="table-row">
-                  <div className="col-student">
-                    <div className="student-info">
-                      <div className="student-avatar">👤</div>
-                      <div>
-                        <p className="student-name">{payment.student?.first_name} {payment.student?.last_name}</p>
-                        <p className="student-class">{payment.student?.school_class?.name || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-amount">
-                    <span className="amount-value">
-                      {formatCurrency(payment.amount, payment.currency)}
-                    </span>
-                  </div>
-                  <div className="col-type">
-                    <span className="payment-type">
-                      {payment.type === 'tuition' ? 'Scolarité' : 'Frais'}
-                    </span>
-                  </div>
-                  <div className="col-method">
-                    <div className="payment-method">
-                      <span className="method-icon">
-                        {getProviderIcon(payment.mobileMoneyProvider)}
-                      </span>
-                      <span>
-                        {payment.paymentMethod === 'mobile_money' 
-                          ? payment.mobileMoneyProvider?.replace('_', ' ') 
-                          : 'Espèces'
+          <div className="payments-table-container">
+            <table className="payments-table">
+              <thead>
+                <tr>
+                  <th>Élève</th>
+                  <th>Montant</th>
+                  <th>Type</th>
+                  <th>Méthode</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                  <th className="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const filtered = payments.filter(p => selectedCurrency === 'ALL' || p.currency === selectedCurrency);
+                  const indexOfLastItem = currentPage * itemsPerPage;
+                  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                  const currentItems = filtered.slice(indexOfFirstItem, indexOfLastItem);
+                  
+                  return currentItems.map(payment => (
+                    <tr key={payment.id}>
+                      <td>
+                        <div className="student-info">
+                          <div className="student-avatar">👤</div>
+                          <div>
+                            <p className="student-name">{payment.student?.first_name} {payment.student?.last_name}</p>
+                            <p className="student-class">{payment.student?.school_class?.name || 'N/A'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="amount-value">
+                          {formatCurrency(payment.amount, payment.currency)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="payment-type">
+                          {payment.type === 'tuition' ? 'Scolarité' : 'Frais'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="payment-method">
+                          <span className="method-icon">
+                            {getProviderIcon(payment.mobileMoneyProvider)}
+                          </span>
+                          <span>
+                            {payment.paymentMethod === 'mobile_money' 
+                              ? payment.mobileMoneyProvider?.replace('_', ' ') 
+                              : 'Espèces'
+                            }
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`status-badge ${getStatusColor(payment.status)}`}>
+                          {getStatusLabel(payment.status)}
+                        </span>
+                      </td>
+                      <td>
+                        {payment.paidAt 
+                          ? payment.paidAt.toLocaleDateString() 
+                          : payment.dueDate.toLocaleDateString()
                         }
-                      </span>
-                    </div>
-                  </div>
-                  <div className="col-status">
-                    <span className={`status-badge ${getStatusColor(payment.status)}`}>
-                      {getStatusLabel(payment.status)}
-                    </span>
-                  </div>
-                  <div className="col-date">
-                    {payment.paidAt 
-                      ? payment.paidAt.toLocaleDateString() 
-                      : payment.dueDate.toLocaleDateString()
-                    }
-                  </div>
-                  <div className="col-actions">
-                    <button className="action-btn" onClick={() => handleViewReceipt(payment)} title="Voir le reçu">
-                      🧾
-                    </button>
-                    <button className="action-btn" onClick={() => handleEditPayment(payment)} title="Modifier">
-                      ✏️
-                    </button>
-                    <button className="action-btn delete" onClick={() => handleDeletePayment(payment.id)} title="Supprimer">
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))
-            }
+                      </td>
+                      <td className="actions-cell">
+                        <div className="table-actions">
+                          <button className="btn-icon" onClick={() => handleViewReceipt(payment)} title="Voir le reçu">
+                            🧾
+                          </button>
+                          <button className="btn-icon" onClick={() => handleEditPayment(payment)} title="Modifier">
+                            ✏️
+                          </button>
+                          <button className="btn-icon danger" onClick={() => handleDeletePayment(payment.id)} title="Supprimer">
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+            <Pagination 
+              currentPage={currentPage}
+              totalItems={payments.filter(p => selectedCurrency === 'ALL' || p.currency === selectedCurrency).length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import type { Notification } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './CommunicationCenter.css';
 import axios from 'axios';
 
@@ -16,6 +17,14 @@ const CommunicationCenter: React.FC = () => {
     recipients: 'all' as 'all' | 'parents' | 'teachers' | 'students',
     channels: ['push'] as ('push' | 'sms' | 'email')[]
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -376,53 +385,77 @@ const CommunicationCenter: React.FC = () => {
       {/* Onglet Historique */}
       {activeTab === 'history' && (
         <div className="history-content">
-          <div className="notifications-list">
-            {notifications.map(notification => (
-              <div key={notification.id} className="notification-card">
-                <div className="notification-header">
-                  <div className="notification-info">
-                    <span className="notification-icon">
-                      {getNotificationIcon(notification.type)}
-                    </span>
-                    <div className="notification-details">
-                      <h3 className="notification-title">{notification.title}</h3>
-                      <p className="notification-meta">
-                        Envoyée le {notification.sentAt.toLocaleDateString()} à {notification.sentAt.toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="notification-channels">
-                    {notification.channels.map(channel => (
-                      <span key={channel} className="channel-badge" title={channel}>
-                        {getChannelIcon(channel)}
+          <div className="notifications-table-container">
+            <table className="notifications-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Message</th>
+                  <th>Audience</th>
+                  <th>Statistiques</th>
+                  <th>Canaux</th>
+                  <th className="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                   const indexOfLastItem = currentPage * itemsPerPage;
+                   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                   const currentItems = notifications.slice(indexOfFirstItem, indexOfLastItem);
+                   
+                   return currentItems.map(notification => (
+                    <tr key={notification.id}>
+                    <td>
+                      <div className="table-date-compact">
+                        <span className="date-main">{notification.sentAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                        <span className="time-sub">{notification.sentAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="notification-icon" title={notification.type}>
+                        {getNotificationIcon(notification.type)}
                       </span>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="notification-content">
-                  <p className="notification-message">{notification.message}</p>
-                </div>
-                
-                <div className="notification-stats">
-                  <div className="stat-item">
-                    <span className="stat-label">Destinataires:</span>
-                    <span className="stat-value">{notification.recipients.length}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Lue par:</span>
-                    <span className="stat-value">{notification.readBy.length}</span>
-                  </div>
-                  <div className="stat-item">
-                    <span className="stat-label">Taux de lecture:</span>
-                    <span className="stat-value">
-                      {Math.round((notification.readBy.length / notification.recipients.length) * 100)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td>
+                      <div className="message-cell-content">
+                        <strong>{notification.title}</strong>
+                        <span className="message-truncate">{notification.message.substring(0, 50)}...</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="audience-badge">{notification.recipients.length} dest.</span>
+                    </td>
+                    <td>
+                      <div className="stats-compact">
+                        <span title="Lues">{notification.readBy.length} lues</span>
+                        <span className="rate">({notification.recipients.length > 0 ? Math.round((notification.readBy.length / notification.recipients.length) * 100) : 0}%)</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="table-channels">
+                        {notification.channels.map(channel => (
+                          <span key={channel} className="channel-badge" title={channel}>
+                            {getChannelIcon(channel)}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="actions-cell">
+                      <div className="table-actions">
+                        <button className="btn-icon" title="Renvoyer">
+                          🔄
+                        </button>
+                        <button className="btn-icon danger" title="Supprimer">
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -438,35 +471,56 @@ const CommunicationCenter: React.FC = () => {
             </button>
           </div>
           
-          <div className="templates-grid">
-            {messageTemplates.map(template => (
-              <div key={template.id} className="template-card">
-                <div className="template-header">
-                  <h3 className="template-name">{template.name}</h3>
-                  <span className="template-category">{template.category}</span>
-                </div>
-                
-                <div className="template-content">
-                  <h4 className="template-title">{template.title}</h4>
-                  <p className="template-message">{template.message}</p>
-                </div>
-                
-                <div className="template-actions">
-                  <button className="action-btn primary">
-                    <span>📝</span>
-                    Utiliser
-                  </button>
-                  <button className="action-btn secondary">
-                    <span>✏️</span>
-                    Modifier
-                  </button>
-                  <button className="action-btn secondary">
-                    <span>🗑️</span>
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="templates-table-container">
+            <table className="templates-table">
+              <thead>
+                <tr>
+                  <th>Modèle</th>
+                  <th>Catégorie</th>
+                  <th>Aperçu</th>
+                  <th className="actions-cell">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                   const indexOfLastItem = currentPage * itemsPerPage;
+                   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                   const currentItems = messageTemplates.slice(indexOfFirstItem, indexOfLastItem);
+                   
+                   return currentItems.map(template => (
+                    <tr key={template.id}>
+                    <td>
+                      <div className="template-name-cell">
+                        <strong>{template.name}</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="template-category-badge">{template.category}</span>
+                    </td>
+                    <td>
+                      <div className="template-preview-cell">
+                        <div className="template-preview-title">{template.title}</div>
+                        <div className="template-preview-text">{template.message.substring(0, 60)}...</div>
+                      </div>
+                    </td>
+                    <td className="actions-cell">
+                      <div className="table-actions">
+                        <button className="btn-icon primary" title="Utiliser">
+                          📝
+                        </button>
+                        <button className="btn-icon" title="Modifier">
+                          ✏️
+                        </button>
+                        <button className="btn-icon danger" title="Supprimer">
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

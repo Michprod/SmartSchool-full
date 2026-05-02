@@ -43,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Gestion Utilisateurs (admin) ----
     Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+    Route::apiResource('roles', \App\Http\Controllers\Api\RoleController::class);
 
     // ---- Rapports & Statistiques ----
     Route::get('reports/stats', [\App\Http\Controllers\Api\ReportController::class, 'stats']);

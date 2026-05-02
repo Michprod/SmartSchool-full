@@ -16,7 +16,7 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/students', function () {
         return Inertia::render('Features/Students/Pages/StudentManagement');
-    })->name('students.index');
+    })->name('students.page');
 
     Route::get('/finance', function () {
         return Inertia::render('Features/Finance/Pages/FinancialDashboard');
@@ -28,19 +28,19 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/events', function () {
         return Inertia::render('Features/Events/Pages/EventsPage');
-    })->name('events.index');
+    })->name('events.page');
 
     Route::get('/inventory', function () {
         return Inertia::render('Features/Inventory/Pages/InventoryPage');
-    })->name('inventory.index');
+    })->name('inventory.page');
 
     Route::get('/users', function () {
         return Inertia::render('Features/Users/Pages/UserManagement');
-    })->name('users.index');
+    })->name('users.page');
 
     Route::get('/admissions', function () {
         return Inertia::render('Features/Admissions/Pages/AdmissionManagement');
-    })->name('admissions.index');
+    })->name('admissions.page');
 
     Route::get('/reports', function () {
         return Inertia::render('Features/Reports/Pages/ReportsPage');

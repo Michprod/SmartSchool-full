@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import type { InventoryItem } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './InventoryPage.css';
 import axios from 'axios';
 
@@ -22,6 +23,14 @@ const InventoryPage: React.FC = () => {
     location: '',
     status: 'in_stock'
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedStatus]);
 
   const categories = [
     'Mobilier',
@@ -68,6 +77,10 @@ const InventoryPage: React.FC = () => {
     
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
 
   const getStatusStats = () => {
     return {
@@ -298,70 +311,78 @@ const InventoryPage: React.FC = () => {
       </div>
 
       {/* Liste des articles */}
-      <div className="inventory-grid">
-        {filteredItems.map(item => (
-          <div key={item.id} className="inventory-card">
-            <div className="item-header">
-              <div className="item-category">
-                <span className="category-badge">{item.category}</span>
-              </div>
-              <div className="item-status">
-                <span className={`status-badge ${getStatusColor(item.status)}`}>
-                  {getStatusLabel(item.status)}
-                </span>
-              </div>
-            </div>
-            
-            <div className="item-content">
-              <h3 className="item-name">{item.name}</h3>
-              
-              <div className="item-details">
-                <div className="detail-item">
-                  <span className="detail-icon">📦</span>
-                  <div className="detail-content">
-                    <span className="detail-label">Quantité</span>
-                    <span className="detail-value">{item.quantity}</span>
+      <div className="inventory-table-container">
+        <table className="inventory-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Catégorie</th>
+              <th>Emplacement</th>
+              <th>Quantité</th>
+              <th>Statut</th>
+              <th className="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentItems.map(item => (
+              <tr key={item.id}>
+                <td>
+                  <span className="item-name">{item.name}</span>
+                </td>
+                <td>
+                  <span className="category-badge">{item.category}</span>
+                </td>
+                <td>
+                  <div className="table-location">
+                    <span>📍</span> {item.location}
                   </div>
-                </div>
-                
-                <div className="detail-item">
-                  <span className="detail-icon">📍</span>
-                  <div className="detail-content">
-                    <span className="detail-label">Emplacement</span>
-                    <span className="detail-value">{item.location}</span>
+                </td>
+                <td>
+                  <span className="quantity-badge">{item.quantity}</span>
+                </td>
+                <td>
+                  <span className={`status-badge ${getStatusColor(item.status)}`}>
+                    {getStatusLabel(item.status)}
+                  </span>
+                </td>
+                <td className="actions-cell">
+                  <div className="table-actions">
+                    <button 
+                      className="btn-icon"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setShowItemModal(true);
+                      }}
+                      title="Voir détails"
+                    >
+                      👁️
+                    </button>
+                    <button 
+                      className="btn-icon"
+                      onClick={() => handleEditItem(item)}
+                      title="Modifier"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      className="btn-icon danger"
+                      onClick={() => handleDeleteItem(item.id)}
+                      title="Supprimer"
+                    >
+                      🗑️
+                    </button>
                   </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="item-actions">
-              <button 
-                className="action-btn primary"
-                onClick={() => {
-                  setSelectedItem(item);
-                  setShowItemModal(true);
-                }}
-                title="Voir détails"
-              >
-                <span>👁️</span>
-              </button>
-              <button 
-                className="action-btn secondary"
-                onClick={() => handleEditItem(item)}
-                title="Modifier"
-              >
-                <span>✏️</span>
-              </button>
-              <button 
-                className="action-btn danger"
-                onClick={() => handleDeleteItem(item.id)}
-                title="Supprimer"
-              >
-                <span>🗑️</span>
-              </button>
-            </div>
-          </div>
-        ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={filteredItems.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {filteredItems.length === 0 && (

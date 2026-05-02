@@ -27,7 +27,11 @@
   padding: 24px;
   overflow-y: auto;
   background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
 }
+
+
 
 /* Page Header */
 .page-header {

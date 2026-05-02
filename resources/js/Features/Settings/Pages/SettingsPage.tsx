@@ -222,7 +222,13 @@ const SettingsPage: React.FC = () => {
         </button>
       </div>
 
-      <form onSubmit={handleSaveSettings} className="settings-content">
+      {/* Content */}
+      {activeTab === 'profiles' ? (
+        <div className="settings-section">
+          <ProfileManagement />
+        </div>
+      ) : (
+        <form onSubmit={handleSaveSettings} className="settings-content">
         {/* General Settings */}
         {activeTab === 'general' && (
           <div className="settings-section">
@@ -651,6 +657,7 @@ const SettingsPage: React.FC = () => {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 };

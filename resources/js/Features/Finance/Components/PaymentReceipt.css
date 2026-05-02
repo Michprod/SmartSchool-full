@@ -2,6 +2,15 @@
    Payment Receipt Component Styles
    ============================================================ */
 
+.receipt-container {
+  padding: 40px;
+  background: #ffffff; /* Explicit white for capture */
+  color: #1e293b;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
 .payment-receipt {
     background: white;
     border-radius: 12px;

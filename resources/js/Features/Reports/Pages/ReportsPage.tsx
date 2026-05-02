@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './ReportsPage.css';
 import axios from 'axios';
 
@@ -15,6 +16,14 @@ interface Report {
 const ReportsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory]);
 
   const reports: Report[] = [
     // Academic Reports
@@ -146,6 +155,10 @@ const ReportsPage: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentReports = filteredReports.slice(indexOfFirstItem, indexOfLastItem);
+
   const handleGenerateReport = (reportId: string) => {
     console.log('Generating report:', reportId);
     alert(`Génération du rapport en cours...\n\nLe rapport sera disponible au format PDF et Excel.`);
@@ -220,30 +233,52 @@ const ReportsPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Reports Grid */}
-      <div className="reports-grid">
-        {filteredReports.map(report => (
-          <div key={report.id} className="report-card">
-            <div className="report-icon">{report.icon}</div>
-            <div className="report-info">
-              <h3 className="report-name">{report.name}</h3>
-              <p className="report-description">{report.description}</p>
-            </div>
-            <div className="report-actions">
-              <button
-                className="btn btn-primary"
-                onClick={() => handleGenerateReport(report.id)}
-              >
-                <span>📄</span>
-                Générer
-              </button>
-              <button className="btn btn-outline">
-                <span>📅</span>
-                Planifier
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Reports Table */}
+      <div className="reports-table-container">
+        <table className="reports-table">
+          <thead>
+            <tr>
+              <th>Rapport</th>
+              <th>Description</th>
+              <th className="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentReports.map(report => (
+              <tr key={report.id}>
+                <td>
+                  <div className="report-name-cell">
+                    <span className="report-icon-small">{report.icon}</span>
+                    <strong>{report.name}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span className="report-description-text">{report.description}</span>
+                </td>
+                <td className="actions-cell">
+                  <div className="table-actions">
+                    <button
+                      className="btn-icon primary"
+                      onClick={() => handleGenerateReport(report.id)}
+                      title="Générer PDF/Excel"
+                    >
+                      📄
+                    </button>
+                    <button className="btn-icon" title="Planifier">
+                      📅
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={filteredReports.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {filteredReports.length === 0 && (

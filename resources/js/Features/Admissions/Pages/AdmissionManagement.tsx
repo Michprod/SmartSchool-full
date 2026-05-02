@@ -4,6 +4,7 @@ import type { Application } from '../types';
 import ApplicationForm from '../Components/ApplicationForm';
 import type { ApplicationFormData } from '../Components/ApplicationForm';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './AdmissionManagement.css';
 import axios from 'axios';
 
@@ -13,6 +14,14 @@ const AdmissionManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'under_review' | 'accepted' | 'rejected'>('all');
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [editingApplication, setEditingApplication] = useState<ApplicationFormData | undefined>(undefined);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   useEffect(() => {
     const loadApplications = async () => {
@@ -58,6 +67,10 @@ const AdmissionManagement: React.FC = () => {
     if (activeTab === 'all') return true;
     return app.status === activeTab;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentApplications = filteredApplications.slice(indexOfFirstItem, indexOfLastItem);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -282,132 +295,92 @@ const AdmissionManagement: React.FC = () => {
         </button>
       </div>
 
-      {/* Liste des candidatures */}
-      <div className="applications-list">
-        {filteredApplications.map(application => (
-          <div key={application.id} className="application-card">
-            <div className="application-header">
-              <div className="applicant-info">
-                <div className="applicant-avatar">
-                  {application.studentInfo.firstName.charAt(0)}
-                  {application.studentInfo.lastName.charAt(0)}
-                </div>
-                <div className="applicant-details">
-                  <h3 className="applicant-name">
-                    {application.studentInfo.firstName} {application.studentInfo.lastName}
-                  </h3>
-                  <p className="applied-class">Candidature pour: {application.appliedClass}</p>
-                  <p className="submission-date">
-                    Soumise le {application.submittedAt.toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="application-status">
-                <span className={`status-badge ${getStatusColor(application.status)}`}>
-                  {getStatusLabel(application.status)}
-                </span>
-              </div>
-            </div>
-            
-            <div className="application-content">
-              <div className="student-details-section">
-                <h4>Informations de l'élève</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Date de naissance:</span>
-                    <span className="info-value">{application.studentInfo.dateOfBirth.toLocaleDateString()}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Genre:</span>
-                    <span className="info-value">{application.studentInfo.gender === 'M' ? 'Masculin' : 'Féminin'}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="parent-details-section">
-                <h4>Contact parent/tuteur</h4>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Nom:</span>
-                    <span className="info-value">{application.parentInfo.firstName} {application.parentInfo.lastName}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Email:</span>
-                    <span className="info-value">{application.parentInfo.email}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Téléphone:</span>
-                    <span className="info-value">{application.parentInfo.phone}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="documents-section">
-                <h4>Documents ({application.documents.length})</h4>
-                <div className="documents-list">
-                  {application.documents.map((doc, index) => (
-                    <div key={index} className="document-item">
-                      <span className="doc-icon">📄</span>
-                      <span className="doc-name">{doc.type}</span>
-                      <button className="doc-view-btn">Voir</button>
+      {/* Tableau des candidatures */}
+      <div className="applications-table-container">
+        <table className="applications-table">
+          <thead>
+            <tr>
+              <th>Candidat</th>
+              <th>Classe visée</th>
+              <th>Date de naissance</th>
+              <th>Genre</th>
+              <th>Parent / Tuteur</th>
+              <th>Contact</th>
+              <th>Date soumission</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentApplications.map(application => (
+              <tr key={application.id}>
+                <td>
+                  <div className="applicant-info-cell">
+                    <div className="applicant-avatar-sm">
+                      {application.studentInfo.firstName.charAt(0)}
+                      {application.studentInfo.lastName.charAt(0)}
                     </div>
-                  ))}
-                </div>
-              </div>
-              
-              {application.notes && (
-                <div className="notes-section">
-                  <h4>Notes de révision</h4>
-                  <p className="review-notes">{application.notes}</p>
-                </div>
-              )}
-            </div>
-            
-            <div className="application-actions">
-              {application.status === 'submitted' && (
-                <>
-                  <button 
-                    className="action-btn primary"
-                    onClick={() => handleStatusChange(application.id, 'under_review')}
-                  >
-                    <span>🔍</span>
-                    Commencer la révision
-                  </button>
-                </>
-              )}
-              
-              {application.status === 'under_review' && (
-                <>
-                  <button 
-                    className="action-btn success"
-                    onClick={() => handleStatusChange(application.id, 'accepted')}
-                  >
-                    <span>✅</span>
-                    Accepter
-                  </button>
-                  <button 
-                    className="action-btn danger"
-                    onClick={() => handleStatusChange(application.id, 'rejected')}
-                  >
-                    <span>❌</span>
-                    Refuser
-                  </button>
-                </>
-              )}
-              
-              <button className="action-btn secondary">
-                <span>💬</span>
-                Contacter parent
-              </button>
-              
-              <button className="action-btn secondary">
-                <span>📝</span>
-                Ajouter note
-              </button>
-            </div>
-          </div>
-        ))}
+                    <span className="applicant-fullname">
+                      {application.studentInfo.firstName} {application.studentInfo.lastName}
+                    </span>
+                  </div>
+                </td>
+                <td><span className="class-badge">{application.appliedClass}</span></td>
+                <td>{application.studentInfo.dateOfBirth.toLocaleDateString('fr-CD')}</td>
+                <td>{application.studentInfo.gender === 'M' ? '👨 M' : '👩 F'}</td>
+                <td>
+                  {application.parentInfo.firstName} {application.parentInfo.lastName}
+                </td>
+                <td>
+                  <div className="contact-cell">
+                    <span>📧 {application.parentInfo.email}</span>
+                    <span>📱 {application.parentInfo.phone}</span>
+                  </div>
+                </td>
+                <td>{application.submittedAt.toLocaleDateString('fr-CD')}</td>
+                <td>
+                  <span className={`status-badge ${getStatusColor(application.status)}`}>
+                    {getStatusLabel(application.status)}
+                  </span>
+                </td>
+                <td>
+                  <div className="row-actions">
+                    {application.status === 'submitted' && (
+                      <button
+                        className="row-btn-text review"
+                        onClick={() => handleStatusChange(application.id, 'under_review')}
+                        title="Commencer la révision"
+                      >🔍 Réviser</button>
+                    )}
+                    {application.status === 'under_review' && (
+                      <>
+                        <button
+                          className="row-btn-text accept"
+                          onClick={() => handleStatusChange(application.id, 'accepted')}
+                          title="Accepter"
+                        >✅ Accepter</button>
+                        <button
+                          className="row-btn-text reject"
+                          onClick={() => handleStatusChange(application.id, 'rejected')}
+                          title="Refuser"
+                        >❌ Refuser</button>
+                      </>
+                    )}
+                    {(application.status === 'accepted' || application.status === 'rejected') && (
+                      <span className="action-done">—</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={filteredApplications.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {filteredApplications.length === 0 && (

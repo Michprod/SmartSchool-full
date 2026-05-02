@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import type { SchoolEvent } from '../types';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './EventsPage.css';
 import axios from 'axios';
 
@@ -14,7 +15,7 @@ const EventsPage: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<SchoolEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
 
-  const [newEvent, setNewEvent] = useState<Omit<SchoolEvent, 'id'>>({
+  const [newEvent, setNewEvent] = useState<Partial<SchoolEvent>>({
     title: '',
     description: '',
     date: new Date(),
@@ -22,6 +23,27 @@ const EventsPage: React.FC = () => {
     organizer: '',
     media: []
   });
+
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+
+  const resetNewEvent = () => {
+    setNewEvent({
+      title: '',
+      description: '',
+      date: new Date(),
+      location: '',
+      organizer: '',
+      media: []
+    });
+  };
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedFilter]);
 
   const loadEvents = async () => {
     setLoading(true);
@@ -56,6 +78,10 @@ const EventsPage: React.FC = () => {
     
     return matchesSearch && matchesFilter;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentEvents = filteredEvents.slice(indexOfFirstItem, indexOfLastItem);
 
   const upcomingEvents = events.filter(event => event.date > new Date());
   const pastEvents = events.filter(event => event.date <= new Date());
@@ -92,14 +118,7 @@ const EventsPage: React.FC = () => {
         setEvents(prev => [savedEvent, ...prev]);
       }
       
-      setNewEvent({
-        title: '',
-        description: '',
-        date: new Date(),
-        location: '',
-        organizer: '',
-        media: []
-      });
+      resetNewEvent();
       setShowCreateModal(false);
     } catch (e: any) {
       console.error('Error saving event:', e);
@@ -258,13 +277,32 @@ const EventsPage: React.FC = () => {
         </div>
         
         <div className="action-buttons">
+          <div className="view-mode-toggle">
+            <button 
+              className={`toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="Vue Liste"
+            >
+              📋
+            </button>
+            <button 
+              className={`toggle-btn ${viewMode === 'calendar' ? 'active' : ''}`}
+              onClick={() => setViewMode('calendar')}
+              title="Vue Calendrier"
+            >
+              📅
+            </button>
+          </div>
           <button className="btn btn-outline">
             <span>📊</span>
             Exporter
           </button>
           <button 
             className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              resetNewEvent();
+              setShowCreateModal(true);
+            }}
           >
             <span>➕</span>
             Nouvel Événement
@@ -272,80 +310,152 @@ const EventsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Liste des événements */}
-      <div className="events-grid">
-        {filteredEvents.map(event => (
-          <div 
-            key={event.id} 
-            className={`event-card ${isUpcoming(event.date) ? 'upcoming' : 'past'}`}
-          >
-            <div className="event-header">
-              <div className="event-date">
-                <div className="date-day">
-                  {event.date.getDate()}
-                </div>
-                <div className="date-month">
-                  {event.date.toLocaleDateString('fr-FR', { month: 'short' })}
-                </div>
-              </div>
-              <div className="event-status">
-                <span className={`status-badge ${isUpcoming(event.date) ? 'upcoming' : 'past'}`}>
-                  {isUpcoming(event.date) ? 'À venir' : 'Terminé'}
-                </span>
-              </div>
+      {/* Contenu principal selon le mode de vue */}
+      {viewMode === 'list' ? (
+        <div className="events-table-container">
+          <table className="events-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Événement</th>
+                <th>Lieu</th>
+                <th>Organisateur</th>
+                <th>Statut</th>
+                <th className="actions-cell">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentEvents.map(event => (
+                <tr key={event.id}>
+                  <td>
+                    <div className="table-date-compact">
+                      <span className="date-day">{event.date.getDate().toString().padStart(2, '0')}</span>
+                      <div className="date-info">
+                        <span className="date-month">{event.date.toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                        <span className="date-time">{event.date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="event-title-compact">{event.title}</span>
+                  </td>
+                  <td>
+                    <div className="table-location">
+                      <span>📍</span> {event.location}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="organizer-name">{event.organizer}</span>
+                  </td>
+                  <td>
+                    <span className={`status-badge ${isUpcoming(event.date) ? 'upcoming' : 'past'}`}>
+                      {isUpcoming(event.date) ? 'À venir' : 'Terminé'}
+                    </span>
+                  </td>
+                  <td className="actions-cell">
+                    <div className="table-actions">
+                      <button 
+                        className="btn-icon"
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setShowEventModal(true);
+                        }}
+                        title="Voir détails"
+                      >
+                        👁️
+                      </button>
+                      <button 
+                        className="btn-icon"
+                        onClick={() => handleEditEvent(event)}
+                        title="Modifier"
+                      >
+                        ✏️
+                      </button>
+                      <button 
+                        className="btn-icon danger"
+                        onClick={() => handleDeleteEvent(event.id)}
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <Pagination 
+            currentPage={currentPage}
+            totalItems={filteredEvents.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      ) : (
+        <div className="calendar-view-container">
+          {/* Calendar Grid implementation */}
+          <div className="calendar-grid-wrapper">
+            <div className="calendar-grid-header">
+              {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(day => (
+                <div key={day} className="calendar-day-label">{day}</div>
+              ))}
             </div>
-            
-            <div className="event-content">
-              <h3 className="event-title">{event.title}</h3>
-              <p className="event-description">{event.description}</p>
-              
-              <div className="event-details">
-                <div className="detail-item">
-                  <span className="detail-icon">🕒</span>
-                  <span className="detail-text">{formatDateShort(event.date)}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-icon">📍</span>
-                  <span className="detail-text">{event.location}</span>
-                </div>
-                <div className="detail-item">
-                  <span className="detail-icon">👤</span>
-                  <span className="detail-text">{event.organizer}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="event-actions">
-              <button 
-                className="action-btn primary"
-                onClick={() => {
-                  setSelectedEvent(event);
-                  setShowEventModal(true);
-                }}
-              >
-                <span>👁️</span>
-                Voir
-              </button>
-              <button 
-                className="action-btn secondary"
-                onClick={() => handleEditEvent(event)}
-              >
-                <span>✏️</span>
-                Modifier
-              </button>
-              <button 
-                className="action-btn danger"
-                onClick={() => handleDeleteEvent(event.id)}
-              >
-                <span>🗑️</span>
-                Supprimer
-              </button>
+            <div className="calendar-grid">
+              {(() => {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                
+                // Adjust for Monday start (JS getDay is 0 for Sunday)
+                const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+                
+                const cells = [];
+                // Empty cells at start
+                for (let i = 0; i < startOffset; i++) {
+                  cells.push(<div key={`empty-${i}`} className="calendar-cell empty"></div>);
+                }
+                
+                // Day cells
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const currentDate = new Date(year, month, day);
+                  const dayEvents = events.filter(e => 
+                    e.date.getDate() === day && 
+                    e.date.getMonth() === month && 
+                    e.date.getFullYear() === year
+                  );
+                  
+                  cells.push(
+                    <div key={day} className={`calendar-cell ${day === now.getDate() ? 'today' : ''}`}>
+                      <span className="day-number">{day}</span>
+                      <div className="day-events">
+                        {dayEvents.map(event => (
+                          <div 
+                            key={event.id} 
+                            className={`event-marker ${isUpcoming(event.date) ? 'upcoming' : 'past'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEvent(event);
+                              setShowEventModal(true);
+                            }}
+                            title={event.title}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return cells;
+              })()}
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {filteredEvents.length === 0 && (
+      {filteredEvents.length === 0 && viewMode === 'list' && (
         <div className="empty-state">
           <div className="empty-icon">📅</div>
           <h3>Aucun événement trouvé</h3>
@@ -362,13 +472,19 @@ const EventsPage: React.FC = () => {
 
       {/* Modal de création d'événement */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={() => {
+          setShowCreateModal(false);
+          resetNewEvent();
+        }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Créer un Nouvel Événement</h2>
+              <h2>{ (newEvent as any).id ? 'Modifier l\'Événement' : 'Créer un Nouvel Événement' }</h2>
               <button 
                 className="modal-close"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetNewEvent();
+                }}
               >
                 ✕
               </button>

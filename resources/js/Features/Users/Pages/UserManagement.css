@@ -3,7 +3,7 @@
    ============================================================ */
 
 .user-management {
-  padding: 24px;
+  width: 100%;
 }
 
 /* Page Header */
@@ -11,7 +11,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .page-header h1 {
@@ -29,8 +29,8 @@
 /* Filters Bar */
 .filters-bar {
   display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
   align-items: center;
 }
 
@@ -59,7 +59,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .filter-select {
@@ -79,9 +79,10 @@
 /* Users Table */
 .users-table-container {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  margin-bottom: 20px;
 }
 
 .users-table {
@@ -210,7 +211,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s;
   background: #ecf0f1;
 }
@@ -379,6 +380,28 @@
 }
 
 .btn-secondary:hover { background: #dfe6e9; }
+
+/* Error Messages */
+.error-text {
+  display: block;
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #e74c3c;
+}
+
+.form-group input.error:focus,
+.form-group select.error:focus,
+.form-group textarea.error:focus {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
 
 /* Loading */
 .loading-container {

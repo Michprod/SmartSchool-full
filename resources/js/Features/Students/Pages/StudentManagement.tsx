@@ -6,6 +6,7 @@ import StudentForm from '../Components/StudentForm';
 import type { StudentFormData } from '../Components/StudentForm';
 import StudentDetails from '../Components/StudentDetails';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 import './StudentManagement.css';
 
 const StudentManagement: React.FC = () => {
@@ -19,6 +20,14 @@ const StudentManagement: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   
   const [allClasses, setAllClasses] = useState<{id: string, name: string}[]>([]);
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedClass]);
 
   const handleViewDetailsClick = (student: Student) => {
     setSelectedStudent(student);
@@ -71,6 +80,10 @@ const StudentManagement: React.FC = () => {
     const matchesClass = selectedClass === 'all' || student.classId === selectedClass;
     return matchesSearch && matchesClass;
   });
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
 
   const calculateAge = (dateOfBirth: Date) => {
     const today = new Date();
@@ -268,79 +281,62 @@ const StudentManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Liste des élèves */}
-      <div className="students-grid">
-        {filteredStudents.map(student => (
-          <div key={student.id} className="student-card">
-            <div className="student-header">
-              <div className="student-avatar">
-                {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-              </div>
-              <div className="student-basic-info">
-                <h3 className="student-name">
-                  {student.firstName} {student.lastName}
-                </h3>
-                <p className="student-number">#{student.studentNumber}</p>
-                <span className={`status-badge ${student.isActive ? 'active' : 'inactive'}`}>
-                  {student.isActive ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="student-details">
-              <div className="detail-item">
-                <span className="detail-icon">🎂</span>
-                <div className="detail-content">
-                  <span className="detail-label">Âge</span>
-                  <span className="detail-value">{calculateAge(student.dateOfBirth)} ans</span>
-                </div>
-              </div>
-              
-              <div className="detail-item">
-                <span className="detail-icon">👥</span>
-                <div className="detail-content">
-                  <span className="detail-label">Classe</span>
-                  <span className="detail-value">{student.class}</span>
-                </div>
-              </div>
-              
-              <div className="detail-item">
-                <span className="detail-icon">📅</span>
-                <div className="detail-content">
-                  <span className="detail-label">Inscription</span>
-                  <span className="detail-value">{student.enrollmentDate.toLocaleDateString()}</span>
-                </div>
-              </div>
-              
-              <div className="detail-item">
-                <span className="detail-icon">{student.gender === 'M' ? '👨' : '👩'}</span>
-                <div className="detail-content">
-                  <span className="detail-label">Genre</span>
-                  <span className="detail-value">{student.gender === 'M' ? 'Masculin' : 'Féminin'}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="student-actions">
-              <button className="action-btn primary" onClick={() => handleViewDetailsClick(student)} title="Voir le dossier">
-                <span>📁</span>
-                Dossier
-              </button>
-              <button className="action-btn secondary" onClick={() => handleEditStudent(student)} title="Modifier">
-                <span>✏️</span>
-                Modifier
-              </button>
-              <button className="action-btn secondary" onClick={() => handleViewPayments(student.id)} title="Paiements">
-                <span>💰</span>
-                Paiements
-              </button>
-              <button className="action-btn secondary" onClick={() => handleContactParent(student)} title="Contact parent">
-                <span>📞</span>
-                Parent
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Tableau des élèves */}
+      <div className="students-table-container">
+        <table className="students-table">
+          <thead>
+            <tr>
+              <th>Élève</th>
+              <th>Matricule</th>
+              <th>Classe</th>
+              <th>Âge</th>
+              <th>Genre</th>
+              <th>Date d'inscription</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentStudents.map(student => (
+              <tr key={student.id}>
+                <td>
+                  <div className="student-info-cell">
+                    <div className="student-avatar-sm">
+                      {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+                    </div>
+                    <span className="student-fullname">
+                      {student.firstName} {student.lastName}
+                    </span>
+                  </div>
+                </td>
+                <td><code className="matricule-code">#{student.studentNumber}</code></td>
+                <td>{student.class}</td>
+                <td>{calculateAge(student.dateOfBirth)} ans</td>
+                <td>{student.gender === 'M' ? '👨 Masculin' : '👩 Féminin'}</td>
+                <td>{student.enrollmentDate.toLocaleDateString('fr-CD')}</td>
+                <td>
+                  <span className={`status-badge ${student.isActive ? 'active' : 'inactive'}`}>
+                    {student.isActive ? 'Actif' : 'Inactif'}
+                  </span>
+                </td>
+                <td>
+                  <div className="row-actions">
+                    <button className="row-btn primary" onClick={() => handleViewDetailsClick(student)} title="Voir le dossier">📁</button>
+                    <button className="row-btn edit" onClick={() => handleEditStudent(student)} title="Modifier">✏️</button>
+                    <button className="row-btn payments" onClick={() => handleViewPayments(student.id)} title="Paiements">💰</button>
+                    <button className="row-btn contact" onClick={() => handleContactParent(student)} title="Contact parent">📞</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pagination 
+          currentPage={currentPage} 
+          totalItems={filteredStudents.length} 
+          itemsPerPage={itemsPerPage} 
+          onPageChange={setCurrentPage} 
+        />
       </div>
 
       {filteredStudents.length === 0 && (

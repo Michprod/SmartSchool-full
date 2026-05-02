@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('currency', ['CDF', 'USD'])->default('CDF');
             $table->enum('type', ['tuition', 'registration', 'exam', 'uniform', 'transport', 'meal', 'other']);
             $table->enum('status', ['pending', 'completed', 'failed', 'refunded'])->default('pending');
-            $table->enum('payment_method', ['mobile_money', 'cash', 'bank_transfer']);
+            $table->enum('payment_method', ['mobile_money', 'cash', 'bank_transfer', 'check']);
             $table->string('mobile_money_provider')->nullable(); // mpesa, orange_money, airtel_money
             $table->string('transaction_id')->nullable();
             $table->string('reference')->nullable();

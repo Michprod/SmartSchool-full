@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
+import Pagination from '../../../Core/Components/Pagination';
 
 interface DashboardStats {
   totalStudents: number;
@@ -16,6 +17,10 @@ import './DashboardHome.css';
 const DashboardHome: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const loadStats = async () => {
@@ -178,18 +183,45 @@ const DashboardHome: React.FC = () => {
       {/* Activités récentes */}
       <div className="recent-activities">
         <h2>Activités Récentes</h2>
-        <div className="activities-list">
-          {stats.recentActivities.map((activity, index) => (
-            <div key={index} className="activity-item">
-              <div className="activity-icon">
-                {getActivityIcon(activity.type)}
-              </div>
-              <div className="activity-content">
-                <p className="activity-description">{activity.description}</p>
-                <span className="activity-time">{formatTimeAgo(activity.timestamp)}</span>
-              </div>
-            </div>
-          ))}
+        <div className="activities-table-container">
+          <table className="activities-table">
+            <thead>
+              <tr>
+                <th className="col-icon"></th>
+                <th>Description</th>
+                <th className="col-time">Heure</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const indexOfLastItem = currentPage * itemsPerPage;
+                const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                const currentActivities = stats.recentActivities.slice(indexOfFirstItem, indexOfLastItem);
+
+                return currentActivities.map((activity, index) => (
+                  <tr key={index}>
+                  <td className="col-icon">
+                    <div className="activity-icon">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                  </td>
+                  <td>
+                    <p className="activity-description">{activity.description}</p>
+                  </td>
+                  <td className="col-time">
+                    <span className="activity-time">{formatTimeAgo(activity.timestamp)}</span>
+                  </td>
+                </tr>
+              ));
+              })()}
+            </tbody>
+          </table>
+          <Pagination 
+            currentPage={currentPage}
+            totalItems={stats.recentActivities.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
 

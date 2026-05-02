@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ProfileManagement.css';
+import Pagination from '../../../Core/Components/Pagination';
+import axios from 'axios';
 
 export interface Profile {
   id: string;
@@ -11,64 +13,45 @@ export interface Profile {
 }
 
 const ProfileManagement: React.FC = () => {
-  const [profiles, setProfiles] = useState<Profile[]>([
-    {
-      id: 'admin',
-      name: 'Administrateur',
-      description: 'Accès complet au système',
-      permissions: ['*'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: 'director',
-      name: 'Directeur',
-      description: 'Supervision et rapports',
-      permissions: ['students:read', 'teachers:read', 'reports:*', 'finance:read'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: 'teacher',
-      name: 'Enseignant',
-      description: 'Gestion des classes et élèves',
-      permissions: ['students:read', 'students:write', 'classes:*', 'grades:*'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: 'accountant',
-      name: 'Comptable',
-      description: 'Gestion financière',
-      permissions: ['finance:*', 'payments:*', 'students:read'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: 'secretary',
-      name: 'Secrétaire',
-      description: 'Gestion administrative',
-      permissions: ['students:*', 'admissions:*', 'communication:write'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    },
-    {
-      id: 'parent',
-      name: 'Parent',
-      description: 'Suivi des enfants',
-      permissions: ['students:read_own', 'payments:read_own', 'messages:read'],
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-01')
-    }
-  ]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     permissions: [] as string[]
   });
+
+  useEffect(() => {
+    fetchProfiles();
+  }, []);
+
+  const fetchProfiles = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/roles');
+      const mappedProfiles = response.data.map((p: any) => ({
+        id: p.id.toString(),
+        slug: p.slug,
+        name: p.name,
+        description: p.description,
+        permissions: Array.isArray(p.permissions) ? p.permissions : [],
+        createdAt: new Date(p.created_at),
+        updatedAt: new Date(p.updated_at)
+      }));
+      setProfiles(mappedProfiles);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const permissionCategories = [
     {
@@ -182,32 +165,54 @@ const ProfileManagement: React.FC = () => {
     setShowProfileForm(true);
   };
 
-  const handleDeleteProfile = (profileId: string) => {
+  const handleDeleteProfile = async (profileId: string) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce profil ?')) {
-      setProfiles(prev => prev.filter(p => p.id !== profileId));
+      try {
+        await axios.delete(`/api/roles/${profileId}`);
+        setProfiles(prev => prev.filter(p => p.id !== profileId));
+      } catch (error) {
+        console.error('Error deleting role:', error);
+        alert('Erreur lors de la suppression.');
+      }
     }
   };
 
-  const handleSubmitProfile = (e: React.FormEvent) => {
+  const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (editingProfile) {
-      setProfiles(prev => prev.map(p => 
-        p.id === editingProfile.id 
-          ? { ...p, ...formData, updatedAt: new Date() }
-          : p
-      ));
-    } else {
-      const newProfile: Profile = {
-        id: formData.name.toLowerCase().replace(/\s+/g, '_'),
-        ...formData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setProfiles(prev => [...prev, newProfile]);
+    try {
+      if (editingProfile) {
+        const response = await axios.put(`/api/roles/${editingProfile.id}`, formData);
+        const updated = response.data;
+        setProfiles(prev => prev.map(p => 
+          p.id === editingProfile.id 
+            ? { 
+                ...p, 
+                name: updated.name, 
+                description: updated.description, 
+                permissions: updated.permissions,
+                updatedAt: new Date(updated.updated_at) 
+              }
+            : p
+        ));
+      } else {
+        const response = await axios.post('/api/roles', formData);
+        const data = response.data;
+        const newProfile: Profile = {
+          id: data.id.toString(),
+          name: data.name,
+          description: data.description,
+          permissions: data.permissions,
+          createdAt: new Date(data.created_at),
+          updatedAt: new Date(data.updated_at)
+        };
+        setProfiles(prev => [...prev, newProfile]);
+      }
+      setShowProfileForm(false);
+    } catch (error) {
+      console.error('Error saving role:', error);
+      alert('Erreur lors de l\'enregistrement.');
     }
-    
-    setShowProfileForm(false);
   };
 
   const handlePermissionToggle = (permissionId: string) => {
@@ -224,6 +229,19 @@ const ProfileManagement: React.FC = () => {
     return `${profile.permissions.length} permissions`;
   };
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProfiles = profiles.slice(indexOfFirstItem, indexOfLastItem);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Chargement des profils...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="profile-management">
       <div className="profile-header">
@@ -237,53 +255,72 @@ const ProfileManagement: React.FC = () => {
         </button>
       </div>
 
-      <div className="profiles-grid">
-        {profiles.map(profile => (
-          <div key={profile.id} className="profile-card">
-            <div className="profile-card-header">
-              <div className="profile-icon">
-                {profile.permissions.includes('*') ? '👑' : '👤'}
-              </div>
-              <div className="profile-info">
-                <h3>{profile.name}</h3>
-                <p>{profile.description}</p>
-              </div>
-            </div>
-
-            <div className="profile-stats">
-              <span className="permission-count">
-                {getPermissionCount(profile)}
-              </span>
-            </div>
-
-            <div className="profile-permissions-preview">
-              {profile.permissions.slice(0, 3).map(perm => (
-                <span key={perm} className="permission-badge">{perm}</span>
-              ))}
-              {profile.permissions.length > 3 && (
-                <span className="permission-badge more">+{profile.permissions.length - 3}</span>
-              )}
-            </div>
-
-            <div className="profile-card-actions">
-              <button 
-                className="btn-icon" 
-                onClick={() => handleEditProfile(profile)}
-                title="Modifier"
-              >
-                ✏️
-              </button>
-              <button 
-                className="btn-icon danger" 
-                onClick={() => handleDeleteProfile(profile.id)}
-                title="Supprimer"
-                disabled={['admin', 'parent'].includes(profile.id)}
-              >
-                🗑️
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="profiles-table-container">
+        <table className="profiles-table">
+          <thead>
+            <tr>
+              <th>Profil</th>
+              <th>Description</th>
+              <th>Permissions</th>
+              <th className="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentProfiles.map(profile => (
+              <tr key={profile.id}>
+                <td>
+                  <div className="profile-name-cell">
+                    <span className="profile-icon">
+                      {profile.permissions.includes('*') ? '👑' : '👤'}
+                    </span>
+                    <strong>{profile.name}</strong>
+                  </div>
+                </td>
+                <td>
+                  <span className="profile-description">{profile.description}</span>
+                </td>
+                <td>
+                  <div className="profile-permissions-preview">
+                    {profile.permissions.slice(0, 3).map(perm => (
+                      <span key={perm} className="permission-badge">{perm}</span>
+                    ))}
+                    {profile.permissions.length > 3 && (
+                      <span className="permission-badge more">+{profile.permissions.length - 3}</span>
+                    )}
+                  </div>
+                  <div className="permission-count-text">
+                    {getPermissionCount(profile)}
+                  </div>
+                </td>
+                <td className="actions-cell">
+                  <div className="table-actions">
+                    <button 
+                      className="btn-icon" 
+                      onClick={() => handleEditProfile(profile)}
+                      title="Modifier"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      className="btn-icon danger" 
+                      onClick={() => handleDeleteProfile(profile.id)}
+                      title="Supprimer"
+                      disabled={['admin', 'parent'].includes(profile.id)}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pagination 
+          currentPage={currentPage}
+          totalItems={profiles.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Profile Form Modal */}
