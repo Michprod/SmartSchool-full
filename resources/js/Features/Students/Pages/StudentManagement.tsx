@@ -9,6 +9,8 @@ import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import Pagination from '../../../Core/Components/Pagination';
 import './StudentManagement.css';
 
+import Can from '../../../Core/Components/Can';
+
 const StudentManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,14 +256,18 @@ const StudentManagement: React.FC = () => {
         </div>
         
         <div className="action-buttons">
-          <button className="btn btn-outline" onClick={handleExportStudents}>
-            <span>📊</span>
-            Exporter
-          </button>
-          <button className="btn btn-primary" onClick={handleAddStudent}>
-            <span>➕</span>
-            Nouvel Élève
-          </button>
+          <Can permission="reports:read">
+            <button className="btn btn-outline" onClick={handleExportStudents}>
+              <span>📊</span>
+              Exporter
+            </button>
+          </Can>
+          <Can permission="students:write">
+            <button className="btn btn-primary" onClick={handleAddStudent}>
+              <span>➕</span>
+              Nouvel Élève
+            </button>
+          </Can>
         </div>
       </div>
 
@@ -322,9 +328,15 @@ const StudentManagement: React.FC = () => {
                 <td>
                   <div className="row-actions">
                     <button className="row-btn primary" onClick={() => handleViewDetailsClick(student)} title="Voir le dossier">📁</button>
-                    <button className="row-btn edit" onClick={() => handleEditStudent(student)} title="Modifier">✏️</button>
-                    <button className="row-btn payments" onClick={() => handleViewPayments(student.id)} title="Paiements">💰</button>
-                    <button className="row-btn contact" onClick={() => handleContactParent(student)} title="Contact parent">📞</button>
+                    <Can permission="students:write">
+                      <button className="row-btn edit" onClick={() => handleEditStudent(student)} title="Modifier">✏️</button>
+                    </Can>
+                    <Can permission="finance:read">
+                      <button className="row-btn payments" onClick={() => handleViewPayments(student.id)} title="Paiements">💰</button>
+                    </Can>
+                    <Can permission="communication:write">
+                      <button className="row-btn contact" onClick={() => handleContactParent(student)} title="Contact parent">📞</button>
+                    </Can>
                   </div>
                 </td>
               </tr>
@@ -344,10 +356,12 @@ const StudentManagement: React.FC = () => {
           <div className="empty-icon">🔍</div>
           <h3>Aucun élève trouvé</h3>
           <p>Aucun élève ne correspond à vos critères de recherche.</p>
-          <button className="btn btn-primary" onClick={handleAddStudent}>
-            <span>➕</span>
-            Ajouter un élève
-          </button>
+          <Can permission="students:write">
+            <button className="btn btn-primary" onClick={handleAddStudent}>
+              <span>➕</span>
+              Ajouter un élève
+            </button>
+          </Can>
         </div>
       )}
 

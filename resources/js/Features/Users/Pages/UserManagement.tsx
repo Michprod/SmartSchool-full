@@ -12,7 +12,7 @@ export interface User {
   lastName: string;
   email: string;
   phone: string;
-  role: 'admin' | 'director' | 'teacher' | 'accountant' | 'secretary' | 'parent';
+  role: 'admin' | 'director' | 'teacher' | 'accountant' | 'secretary' | 'parent' | 'student';
   status: 'active' | 'inactive' | 'suspended';
   photo?: string;
   department?: string;
@@ -104,7 +104,8 @@ const UserManagement: React.FC = () => {
     teacher: 'Enseignant',
     accountant: 'Comptable',
     secretary: 'Secrétaire',
-    parent: 'Parent'
+    parent: 'Parent',
+    student: 'Élève'
   };
 
   const statusLabels: Record<User['status'], string> = {

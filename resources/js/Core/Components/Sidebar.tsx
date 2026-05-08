@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import './Sidebar.css';
 
 // types will eventually be imported or defined, we use any for now or inline it
-type UserRole = 'admin' | 'teacher' | 'parent' | 'student';
+type UserRole = string;
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,21 +14,22 @@ interface MenuItem {
   id: string;
   label: string;
   icon: string;
-  roles: UserRole[];
+  permission?: string;
 }
 
 const menuItems: MenuItem[] = [
-  { id: 'dashboard', label: 'Tableau de Bord', icon: '🏠', roles: ['admin', 'teacher', 'parent', 'student'] },
-  { id: 'finance', label: 'Gestion Financière', icon: '💰', roles: ['admin'] },
-  { id: 'students', label: 'Gestion Élèves', icon: '👥', roles: ['admin', 'teacher'] },
-  { id: 'admissions', label: 'Inscriptions', icon: '📝', roles: ['admin'] },
-  { id: 'communication', label: 'Communication', icon: '📢', roles: ['admin', 'teacher'] },
-  { id: 'events', label: 'Événements', icon: '🎉', roles: ['admin', 'teacher'] },
-  { id: 'inventory', label: 'Inventaire', icon: '📦', roles: ['admin'] },
-  { id: 'users', label: 'Utilisateurs', icon: '👤', roles: ['admin'] },
-  { id: 'reports', label: 'Rapports', icon: '📊', roles: ['admin', 'teacher'] },
-  { id: 'profile', label: 'Mon Profil', icon: '👤', roles: ['admin', 'teacher', 'parent', 'student'] },
-  { id: 'settings', label: 'Paramètres', icon: '⚙️', roles: ['admin'] }
+  { id: 'dashboard', label: 'Tableau de Bord', icon: '🏠' },
+  { id: 'finance', label: 'Gestion Financière', icon: '💰', permission: 'finance:read' },
+  { id: 'students', label: 'Gestion Élèves', icon: '👥', permission: 'students:read' },
+  { id: 'admissions', label: 'Inscriptions', icon: '📝', permission: 'admissions:read' },
+  { id: 'grades', label: 'Notes & Bulletins', icon: '🏫', permission: 'grades:read' },
+  { id: 'communication', label: 'Communication', icon: '📢', permission: 'communication:read' },
+  { id: 'events', label: 'Événements', icon: '🎉', permission: 'events:read' },
+  { id: 'inventory', label: 'Inventaire', icon: '📦', permission: 'inventory:read' },
+  { id: 'users', label: 'Utilisateurs', icon: '👤', permission: 'users:read' },
+  { id: 'reports', label: 'Rapports', icon: '📊', permission: 'reports:read' },
+  { id: 'profile', label: 'Mon Profil', icon: '👤' },
+  { id: 'settings', label: 'Paramètres', icon: '⚙️', permission: 'settings:read' }
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
@@ -37,7 +38,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const userRole = user?.role || 'admin';
   const activePage = url.split('/')[1] || 'dashboard';
 
-  const filteredMenuItems = menuItems.filter(item => item.roles.includes(userRole));
+  const checkPermission = (permission?: string) => {
+    if (!permission) return true;
+    if (userRole === 'admin') return true;
+    
+    const perms = user?.all_permissions || [];
+    if (perms.includes('*')) return true;
+    if (perms.includes(permission)) return true;
+    
+    const [resource] = permission.split(':');
+    if (perms.includes(`${resource}:*`)) return true;
+    
+    return false;
+  };
+
+  const filteredMenuItems = menuItems.filter(item => checkPermission(item.permission));
 
   return (
     <>

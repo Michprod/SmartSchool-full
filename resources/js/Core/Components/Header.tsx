@@ -28,7 +28,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const getRoleLabel = (role: string) => {
     const roleLabels = {
       admin: 'Administrateur',
+      director: 'Directeur',
       teacher: 'Enseignant',
+      accountant: 'Comptable',
+      secretary: 'Secrétaire',
       parent: 'Parent',
       student: 'Élève'
     };

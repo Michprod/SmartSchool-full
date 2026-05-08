@@ -12,6 +12,13 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+    
+    /**
+     * The attributes that should be appended to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['all_permissions'];
 
     /**
      * The attributes that are mass assignable.
@@ -84,6 +91,11 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
+        // System administrator always has all permissions
+        if ($this->role === 'admin') {
+            return true;
+        }
+
         // If user has role-based permissions from the role
         $role = Role::where('slug', $this->role)->first();
         if ($role && !empty($role->permissions)) {
@@ -149,6 +161,11 @@ class User extends Authenticatable
      */
     public function getAllPermissions(): array
     {
+        // System administrator always has all permissions
+        if ($this->role === 'admin') {
+            return ['*'];
+        }
+
         $permissions = [];
         
         // Get permissions from role
@@ -163,5 +180,173 @@ class User extends Authenticatable
         }
         
         return array_unique($permissions);
+    }
+
+    /**
+     * Accessor for all_permissions attribute
+     */
+    public function getAllPermissionsAttribute(): array
+    {
+        return $this->getAllPermissions();
+    }
+
+    // ============================================================
+    // RELATIONS CLASSE/PROFESSEUR
+    // ============================================================
+
+    /**
+     * Classe dont ce professeur est le titulaire (principal)
+     * Relation one-to-many: un professeur peut être titulaire d'une seule classe
+     */
+    public function principalClass()
+    {
+        return $this->hasOne(SchoolClass::class, 'teacher_id');
+    }
+
+    /**
+     * Toutes les classes où ce professeur enseigne (relation many-to-many)
+     * Inclut les informations sur la matière, l'année académique via la table pivot
+     */
+    public function teachingClasses()
+    {
+        return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
+            ->withPivot('subject', 'academic_year', 'schedule', 'is_active')
+            ->withTimestamps();
+    }
+
+    /**
+     * Classes actives où le professeur enseigne actuellement
+     */
+    public function activeTeachingClasses()
+    {
+        return $this->teachingClasses()->wherePivot('is_active', true);
+    }
+
+    /**
+     * Obtenir les matières enseignées par ce professeur avec les classes associées
+     */
+    public function subjectsWithClasses()
+    {
+        return $this->teachingClasses()
+            ->wherePivot('is_active', true)
+            ->get()
+            ->groupBy('pivot.subject');
+    }
+
+    /**
+     * Vérifier si ce professeur enseigne dans une classe spécifique
+     */
+    public function teachesInClass(int $classId): bool
+    {
+        return $this->teachingClasses()
+            ->where('school_classes.id', $classId)
+            ->wherePivot('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Vérifier si un professeur peut noter une classe/matière spécifique
+     */
+    public function canGrade(int $classId, int $subjectId): bool
+    {
+        if ($this->hasRole('admin')) {
+            return true;
+        }
+
+        return ClassSubject::where('class_id', $classId)
+            ->where('subject_id', $subjectId)
+            ->where('teacher_id', $this->id)
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Obtenir l'emploi du temps complet du professeur (classes titulaire + matières)
+     */
+    public function fullSchedule()
+    {
+        $schedule = [];
+
+        // Classe dont il est titulaire
+        if ($this->principalClass) {
+            $schedule['principal_class'] = $this->principalClass;
+        }
+
+        // Classes où il enseigne des matières
+        $schedule['teaching_classes'] = $this->activeTeachingClasses()
+            ->get()
+            ->map(function ($class) {
+                return [
+                    'class' => $class,
+                    'subject' => $class->pivot->subject,
+                    'academic_year' => $class->pivot->academic_year,
+                    'schedule' => $class->pivot->schedule,
+                ];
+            });
+
+        return $schedule;
+    }
+
+    // ============================================================
+    // RELATIONS SYSTÈME DE NOTES (PROFESSEUR)
+    // ============================================================
+
+    /**
+     * Matières enseignées par ce professeur (via class_subject)
+     */
+    public function teachingSubjects()
+    {
+        return $this->belongsToMany(Subject::class, 'class_subject', 'teacher_id', 'subject_id')
+            ->withPivot('class_id', 'coefficient', 'academic_year', 'is_active')
+            ->withTimestamps();
+    }
+
+    /**
+     * Évaluations créées par ce professeur
+     */
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class, 'teacher_id');
+    }
+
+    /**
+     * Évaluations pour une classe et matière spécifiques
+     */
+    public function assessmentsForClassAndSubject(int $classId, int $subjectId)
+    {
+        return $this->assessments()
+            ->where('class_id', $classId)
+            ->where('subject_id', $subjectId);
+    }
+
+    /**
+     * Obtenir les élèves que ce professeur peut évaluer
+     */
+    public function studentsToGrade()
+    {
+        // Récupérer les IDs des classes où il enseigne
+        $classIds = \App\Models\ClassSubject::where('teacher_id', $this->id)
+            ->where('is_active', true)
+            ->pluck('class_id')
+            ->unique()
+            ->toArray();
+
+        return Student::whereIn('class_id', $classIds)->get();
+    }
+
+    /**
+     * Moyennes calculées par ce professeur
+     */
+    public function generatedAverages()
+    {
+        return $this->hasMany(StudentAverage::class, 'calculated_by');
+    }
+
+    /**
+     * Bulletins générés par ce professeur
+     */
+    public function generatedReportCards()
+    {
+        return $this->hasMany(ReportCard::class, 'generated_by');
     }
 }

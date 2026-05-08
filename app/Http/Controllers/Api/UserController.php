@@ -13,6 +13,9 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        if (!$request->user()->hasPermission('users:read')) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
         $query = User::query();
         if ($request->has('role')) {
             $query->where('role', $request->role);
@@ -39,6 +42,9 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        if (!$request->user()->hasPermission('users:read')) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
@@ -69,9 +75,12 @@ class UserController extends Controller
         return response()->json($user->makeHidden(['password', 'remember_token']), 201);
     }
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
         $user = User::findOrFail($id);
+        if ($request->user()->id !== $user->id && !$request->user()->hasPermission('users:read')) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
         $user->role_info = \App\Models\Role::where('slug', $user->role)->first();
         $user->all_permissions = $user->getAllPermissions();
         return response()->json($user->makeHidden(['password', 'remember_token']));
@@ -80,6 +89,12 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $user = User::findOrFail($id);
+        
+        // Authorization check: user can only update themselves unless they have 'users:write' or 'users:read'
+        if ($request->user()->id !== $user->id && !$request->user()->hasPermission('users:read')) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
+        
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:255',
             'last_name'  => 'sometimes|string|max:255',
@@ -118,8 +133,11 @@ class UserController extends Controller
         return response()->json($user->makeHidden(['password', 'remember_token']));
     }
 
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
+        if (!$request->user()->hasPermission('users:read')) {
+            return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
+        }
         $user = User::findOrFail($id);
         
         // Prevent deleting yourself

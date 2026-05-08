@@ -33,9 +33,13 @@ class CheckPermission
         
         // Check if user has the required permission
         if (!$user->hasPermission($permission)) {
-            return response()->json([
-                'message' => 'You do not have permission to access this resource.',
-            ], 403);
+            if ($request->wantsJson() && !$request->header('X-Inertia')) {
+                return response()->json([
+                    'message' => 'You do not have permission to access this resource.',
+                ], 403);
+            }
+            
+            return redirect()->route('home')->with('error', 'Vous n\'avez pas la permission d\'accéder à cette page.');
         }
         
         return $next($request);

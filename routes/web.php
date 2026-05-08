@@ -16,39 +16,43 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/students', function () {
         return Inertia::render('Features/Students/Pages/StudentManagement');
-    })->name('students.page');
+    })->middleware('permission:students:read')->name('students.page');
 
     Route::get('/finance', function () {
         return Inertia::render('Features/Finance/Pages/FinancialDashboard');
-    })->name('finance.index');
+    })->middleware('permission:finance:read')->name('finance.index');
 
     Route::get('/communication', function () {
         return Inertia::render('Features/Communication/Pages/CommunicationCenter');
-    })->name('communication.index');
+    })->middleware('permission:communication:read')->name('communication.index');
 
     Route::get('/events', function () {
         return Inertia::render('Features/Events/Pages/EventsPage');
-    })->name('events.page');
+    })->middleware('permission:events:read')->name('events.page');
 
     Route::get('/inventory', function () {
         return Inertia::render('Features/Inventory/Pages/InventoryPage');
-    })->name('inventory.page');
+    })->middleware('permission:inventory:read')->name('inventory.page');
 
     Route::get('/users', function () {
         return Inertia::render('Features/Users/Pages/UserManagement');
-    })->name('users.page');
+    })->middleware('permission:users:read')->name('users.page');
 
     Route::get('/admissions', function () {
         return Inertia::render('Features/Admissions/Pages/AdmissionManagement');
-    })->name('admissions.page');
+    })->middleware('permission:admissions:read')->name('admissions.page');
+
+    Route::get('/grades', function () {
+        return Inertia::render('Features/Grades/Pages/GradesPage');
+    })->middleware('permission:grades:read')->name('grades.page');
 
     Route::get('/reports', function () {
         return Inertia::render('Features/Reports/Pages/ReportsPage');
-    })->name('reports.index');
+    })->middleware('permission:reports:read')->name('reports.index');
 
     Route::get('/settings', function () {
         return Inertia::render('Features/Settings/Pages/SettingsPage');
-    })->name('settings.index');
+    })->middleware('permission:settings:read')->name('settings.index');
 
     Route::get('/profile', function () {
         return Inertia::render('Features/Users/Pages/ProfilePage');

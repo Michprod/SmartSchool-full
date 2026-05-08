@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import DashboardLayout from '../../../Core/Layouts/DashboardLayout';
 import Pagination from '../../../Core/Components/Pagination';
+import Can from '../../../Core/Components/Can';
 
 interface DashboardStats {
   totalStudents: number;
@@ -147,38 +148,40 @@ const DashboardHome: React.FC = () => {
       </div>
 
       {/* Statistiques financières */}
-      <div className="financial-overview">
-        <h2>Aperçu Financier</h2>
-        <div className="financial-grid">
-          <div className="financial-card revenue">
-            <h3>Revenus Totaux</h3>
-            <div className="currency-amounts">
-              <div className="amount-item">
-                <span className="currency">CDF</span>
-                <span className="amount">{formatCurrency(stats.totalRevenue?.cdf || 0, 'CDF')}</span>
-              </div>
-              <div className="amount-item">
-                <span className="currency">USD</span>
-                <span className="amount">{formatCurrency(stats.totalRevenue?.usd || 0, 'USD')}</span>
+      <Can permission="finance:read">
+        <div className="financial-overview">
+          <h2>Aperçu Financier</h2>
+          <div className="financial-grid">
+            <div className="financial-card revenue">
+              <h3>Revenus Totaux</h3>
+              <div className="currency-amounts">
+                <div className="amount-item">
+                  <span className="currency">CDF</span>
+                  <span className="amount">{formatCurrency(stats.totalRevenue?.cdf || 0, 'CDF')}</span>
+                </div>
+                <div className="amount-item">
+                  <span className="currency">USD</span>
+                  <span className="amount">{formatCurrency(stats.totalRevenue?.usd || 0, 'USD')}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="financial-card pending">
-            <h3>Paiements en Attente</h3>
-            <div className="currency-amounts">
-              <div className="amount-item">
-                <span className="currency">CDF</span>
-                <span className="amount">{formatCurrency(stats.pendingPayments?.cdf || 0, 'CDF')}</span>
-              </div>
-              <div className="amount-item">
-                <span className="currency">USD</span>
-                <span className="amount">{formatCurrency(stats.pendingPayments?.usd || 0, 'USD')}</span>
+            <div className="financial-card pending">
+              <h3>Paiements en Attente</h3>
+              <div className="currency-amounts">
+                <div className="amount-item">
+                  <span className="currency">CDF</span>
+                  <span className="amount">{formatCurrency(stats.pendingPayments?.cdf || 0, 'CDF')}</span>
+                </div>
+                <div className="amount-item">
+                  <span className="currency">USD</span>
+                  <span className="amount">{formatCurrency(stats.pendingPayments?.usd || 0, 'USD')}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Can>
 
       {/* Activités récentes */}
       <div className="recent-activities">
@@ -229,22 +232,33 @@ const DashboardHome: React.FC = () => {
       <div className="quick-actions">
         <h2>Actions Rapides</h2>
         <div className="actions-grid">
-          <button className="action-btn primary" onClick={() => router.visit('/students')}>
-            <span className="action-icon">➕</span>
-            <span>Nouvel Élève</span>
-          </button>
-          <button className="action-btn secondary" onClick={() => router.visit('/finance')}>
-            <span className="action-icon">💰</span>
-            <span>Enregistrer Paiement</span>
-          </button>
-          <button className="action-btn secondary" onClick={() => router.visit('/communication')}>
-            <span className="action-icon">📢</span>
-            <span>Envoyer Notification</span>
-          </button>
-          <button className="action-btn secondary" onClick={() => router.visit('/reports')}>
-            <span className="action-icon">📊</span>
-            <span>Générer Rapport</span>
-          </button>
+          <Can permission="students:write">
+            <button className="action-btn primary" onClick={() => router.visit('/students')}>
+              <span className="action-icon">➕</span>
+              <span>Nouvel Élève</span>
+            </button>
+          </Can>
+          
+          <Can permission="finance:write">
+            <button className="action-btn secondary" onClick={() => router.visit('/finance')}>
+              <span className="action-icon">💰</span>
+              <span>Enregistrer Paiement</span>
+            </button>
+          </Can>
+
+          <Can permission="communication:write">
+            <button className="action-btn secondary" onClick={() => router.visit('/communication')}>
+              <span className="action-icon">📢</span>
+              <span>Envoyer Notification</span>
+            </button>
+          </Can>
+
+          <Can permission="reports:read">
+            <button className="action-btn secondary" onClick={() => router.visit('/reports')}>
+              <span className="action-icon">📊</span>
+              <span>Générer Rapport</span>
+            </button>
+          </Can>
         </div>
       </div>
     </div>
