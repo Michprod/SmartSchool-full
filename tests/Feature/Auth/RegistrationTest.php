@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Support\FrontendUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -9,11 +10,11 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_screen_can_be_rendered(): void
+    public function test_registration_redirects_to_frontend(): void
     {
         $response = $this->get('/register');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(FrontendUrl::to('register'));
     }
 
     public function test_new_users_can_register(): void
@@ -27,6 +28,6 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(FrontendUrl::to('dashboard'));
     }
 }

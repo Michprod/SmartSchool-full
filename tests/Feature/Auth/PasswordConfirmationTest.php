@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Support\FrontendUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,13 +11,13 @@ class PasswordConfirmationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_confirm_password_screen_can_be_rendered(): void
+    public function test_confirm_password_redirects_to_frontend(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get('/confirm-password');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(FrontendUrl::to('confirm-password'));
     }
 
     public function test_password_can_be_confirmed(): void
@@ -27,7 +28,7 @@ class PasswordConfirmationTest extends TestCase
             'password' => 'password',
         ]);
 
-        $response->assertRedirect();
+        $response->assertRedirect(FrontendUrl::to('dashboard'));
         $response->assertSessionHasNoErrors();
     }
 

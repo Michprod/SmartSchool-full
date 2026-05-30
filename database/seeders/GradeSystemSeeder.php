@@ -83,7 +83,7 @@ class GradeSystemSeeder extends Seeder
         $teachers = User::where('role', 'teacher')->get();
 
         if ($classes->isEmpty() || $teachers->isEmpty()) {
-            $this->command->warn('No classes or teachers found. Run ClassTeacherRelationshipSeeder first.');
+            $this->command->warn('No classes or teachers found. Run UsersSeeder and SchoolClassesSeeder first.');
             return;
         }
 

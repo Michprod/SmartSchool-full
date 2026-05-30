@@ -35,6 +35,10 @@ class User extends Authenticatable
         'avatar',
         'is_active',
         'department',
+        'has_professional_profile',
+        'workload_hours',
+        'job_grade',
+        'job_title',
         'permissions',
         'last_login',
         'birth_date',
@@ -65,6 +69,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'has_professional_profile' => 'boolean',
+            'workload_hours' => 'integer',
             'permissions' => 'array',
             'last_login' => 'datetime',
         ];
@@ -204,13 +210,12 @@ class User extends Authenticatable
     }
 
     /**
-     * Toutes les classes où ce professeur enseigne (relation many-to-many)
-     * Inclut les informations sur la matière, l'année académique via la table pivot
+     * Classes où ce professeur enseigne (via class_subject normalisé)
      */
     public function teachingClasses()
     {
-        return $this->belongsToMany(SchoolClass::class, 'class_teacher', 'teacher_id', 'class_id')
-            ->withPivot('subject', 'academic_year', 'schedule', 'is_active')
+        return $this->belongsToMany(SchoolClass::class, 'class_subject', 'teacher_id', 'class_id')
+            ->withPivot('subject_id', 'coefficient', 'academic_year', 'is_active')
             ->withTimestamps();
     }
 
@@ -227,10 +232,11 @@ class User extends Authenticatable
      */
     public function subjectsWithClasses()
     {
-        return $this->teachingClasses()
-            ->wherePivot('is_active', true)
+        return ClassSubject::where('teacher_id', $this->id)
+            ->where('is_active', true)
+            ->with(['subject', 'schoolClass'])
             ->get()
-            ->groupBy('pivot.subject');
+            ->groupBy(fn ($cs) => $cs->subject?->name ?? 'unknown');
     }
 
     /**
@@ -238,9 +244,9 @@ class User extends Authenticatable
      */
     public function teachesInClass(int $classId): bool
     {
-        return $this->teachingClasses()
-            ->where('school_classes.id', $classId)
-            ->wherePivot('is_active', true)
+        return ClassSubject::where('teacher_id', $this->id)
+            ->where('class_id', $classId)
+            ->where('is_active', true)
             ->exists();
     }
 
@@ -273,14 +279,15 @@ class User extends Authenticatable
         }
 
         // Classes où il enseigne des matières
-        $schedule['teaching_classes'] = $this->activeTeachingClasses()
+        $schedule['teaching_classes'] = ClassSubject::where('teacher_id', $this->id)
+            ->where('is_active', true)
+            ->with(['schoolClass', 'subject'])
             ->get()
-            ->map(function ($class) {
+            ->map(function ($classSubject) {
                 return [
-                    'class' => $class,
-                    'subject' => $class->pivot->subject,
-                    'academic_year' => $class->pivot->academic_year,
-                    'schedule' => $class->pivot->schedule,
+                    'class' => $classSubject->schoolClass,
+                    'subject' => $classSubject->subject?->name,
+                    'academic_year' => $classSubject->academic_year,
                 ];
             });
 

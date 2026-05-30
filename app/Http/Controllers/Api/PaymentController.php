@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\PaymentInstallment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
@@ -29,9 +31,11 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'student_id'           => 'required|exists:students,id',
+            'payment_plan_id'      => 'nullable|exists:payment_plans,id',
+            'payment_installment_id' => 'nullable|exists:payment_installments,id',
             'amount'               => 'required|numeric|min:0',
             'currency'             => 'required|in:CDF,USD',
-            'type'                 => 'required|in:tuition,registration,exam,uniform,transport,meal,other',
+            'type'                 => 'required|string|max:64',
             'payment_method'       => 'required|in:mobile_money,cash,bank_transfer,check',
             'due_date'             => 'required|date',
             'status'               => 'sometimes|in:pending,completed,failed,refunded',
@@ -42,13 +46,37 @@ class PaymentController extends Controller
             'paid_at'              => 'nullable|date',
         ]);
 
-        $payment = Payment::create($validated);
-        return response()->json($payment->load('student'), 201);
+        $payment = DB::transaction(function () use ($validated) {
+            $payment = Payment::create($validated);
+
+            if (! empty($validated['payment_installment_id']) && $payment->status === 'completed') {
+                $installment = PaymentInstallment::with('paymentPlan')->findOrFail($validated['payment_installment_id']);
+                $installment->amount_paid = (float) $installment->amount_paid + (float) $payment->amount;
+                $installment->status = $installment->amount_paid >= $installment->amount_due ? 'completed' : 'partial';
+                if ($installment->status === 'completed') {
+                    $installment->paid_at = now();
+                }
+                $installment->save();
+
+                $plan = $installment->paymentPlan;
+                if ($plan) {
+                    $plan->paid_amount = (float) $plan->installments()->sum('amount_paid');
+                    $plan->status = $plan->paid_amount >= $plan->total_amount
+                        ? 'completed'
+                        : ($plan->paid_amount > 0 ? 'partial' : 'pending');
+                    $plan->save();
+                }
+            }
+
+            return $payment;
+        });
+
+        return response()->json($payment->load(['student', 'paymentPlan', 'paymentInstallment']), 201);
     }
 
     public function show(string $id)
     {
-        return response()->json(Payment::with('student')->findOrFail($id));
+        return response()->json(Payment::with(['student', 'paymentPlan', 'paymentInstallment'])->findOrFail($id));
     }
 
     public function update(Request $request, string $id)

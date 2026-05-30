@@ -211,6 +211,15 @@ class UserPermissionTest extends TestCase
             'last_name' => 'User',
             'email' => 'admin@test.com',
             'password' => bcrypt('password'),
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        User::create([
+            'first_name' => 'Teacher',
+            'last_name' => 'User',
+            'email' => 'teacher@test.com',
+            'password' => bcrypt('password'),
             'role' => 'teacher',
             'is_active' => true,
         ]);
@@ -238,8 +247,6 @@ class UserPermissionTest extends TestCase
 
         $response = $this->actingAs($inactiveUser, 'sanctum')->getJson('/api/users');
 
-        // Should still work as permission middleware is not applied to all routes by default
-        // This test verifies the user can be created with inactive status
-        $response->assertStatus(200);
+        $response->assertStatus(403);
     }
 }

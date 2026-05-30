@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\GradeLevel;
 use App\Models\SchoolClass;
+use App\Models\StudyOption;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -10,45 +12,59 @@ class SchoolClassesSeeder extends Seeder
 {
     public function run(): void
     {
-        // Récupérer les enseignants créés
         $teachers = User::where('role', 'teacher')->get();
+        $academicYear = '2025-2026';
 
-        $classes = [
-            // Maternelle
-            ['name' => '1ère Maternelle', 'level' => 'Maternelle', 'capacity' => 25],
-            ['name' => '2ème Maternelle', 'level' => 'Maternelle', 'capacity' => 25],
-            ['name' => '3ème Maternelle', 'level' => 'Maternelle', 'capacity' => 25],
-
-            // Primaire
-            ['name' => '1ère Primaire', 'level' => 'Primaire', 'capacity' => 35],
-            ['name' => '2ème Primaire', 'level' => 'Primaire', 'capacity' => 35],
-            ['name' => '3ème Primaire', 'level' => 'Primaire', 'capacity' => 35],
-            ['name' => '4ème Primaire', 'level' => 'Primaire', 'capacity' => 35],
-            ['name' => '5ème Primaire', 'level' => 'Primaire', 'capacity' => 35],
-            ['name' => '6ème Primaire', 'level' => 'Primaire', 'capacity' => 35],
-
-            // Éducation de Base (Cycle d'Orientation)
-            ['name' => '7ème Éducation de Base', 'level' => 'Éducation de Base', 'capacity' => 40],
-            ['name' => '8ème Éducation de Base', 'level' => 'Éducation de Base', 'capacity' => 40],
-
-            // Humanités
-            ['name' => '1ère Humanités', 'level' => 'Humanités', 'capacity' => 40],
-            ['name' => '2ème Humanités', 'level' => 'Humanités', 'capacity' => 40],
-            ['name' => '3ème Humanités', 'level' => 'Humanités', 'capacity' => 40],
-            ['name' => '4ème Humanités', 'level' => 'Humanités', 'capacity' => 40],
+        $definitions = [
+            ['level' => 'mat_ps', 'sections' => ['A', 'B'], 'capacity' => 25],
+            ['level' => 'mat_ms', 'sections' => ['A'], 'capacity' => 25],
+            ['level' => 'mat_gs', 'sections' => ['A'], 'capacity' => 25],
+            ['level' => 'prim_1', 'sections' => ['A', 'B'], 'capacity' => 35],
+            ['level' => 'prim_2', 'sections' => ['A'], 'capacity' => 35],
+            ['level' => 'prim_3', 'sections' => ['A'], 'capacity' => 35],
+            ['level' => 'prim_4', 'sections' => ['A'], 'capacity' => 35],
+            ['level' => 'prim_5', 'sections' => ['A'], 'capacity' => 35],
+            ['level' => 'prim_6', 'sections' => ['A', 'B'], 'capacity' => 35],
+            ['level' => 'cteb_7', 'sections' => ['A', 'B'], 'capacity' => 40],
+            ['level' => 'cteb_8', 'sections' => ['A'], 'capacity' => 40],
+            ['level' => 'hum_1', 'option' => 'opt_elec', 'sections' => ['A', 'B'], 'capacity' => 40],
+            ['level' => 'hum_1', 'option' => 'opt_lit', 'sections' => ['A'], 'capacity' => 40],
+            ['level' => 'hum_2', 'option' => 'opt_elec', 'sections' => ['A'], 'capacity' => 40],
+            ['level' => 'hum_3', 'option' => 'opt_sci_mp', 'sections' => ['A'], 'capacity' => 40],
+            ['level' => 'hum_4', 'option' => 'opt_com', 'sections' => ['A'], 'capacity' => 40],
         ];
 
-        foreach ($classes as $i => $classData) {
-            SchoolClass::updateOrCreate(
-                ['name' => $classData['name']],
-                [
-                    'level'      => $classData['level'],
-                    'capacity'   => $classData['capacity'],
-                    'teacher_id' => $teachers->isNotEmpty() ? $teachers->get($i % $teachers->count())?->id : null,
-                ]
-            );
+        $i = 0;
+        foreach ($definitions as $def) {
+            $gradeLevel = GradeLevel::where('code', $def['level'])->first();
+            if (! $gradeLevel) {
+                continue;
+            }
+
+            $studyOptionId = null;
+            if (! empty($def['option'])) {
+                $studyOptionId = StudyOption::where('code', $def['option'])->value('id');
+            }
+
+            foreach ($def['sections'] as $section) {
+                SchoolClass::updateOrCreate(
+                    [
+                        'grade_level_id' => $gradeLevel->id,
+                        'study_option_id' => $studyOptionId,
+                        'section' => $section,
+                        'academic_year' => $academicYear,
+                    ],
+                    [
+                        'capacity' => $def['capacity'],
+                        'teacher_id' => $teachers->isNotEmpty()
+                            ? $teachers->get($i % $teachers->count())?->id
+                            : null,
+                    ]
+                );
+                $i++;
+            }
         }
 
-        $this->command->info('✅ ' . count($classes) . ' classes créées.');
+        $this->command?->info('✅ ' . SchoolClass::count() . ' classes (salles) créées avec nomenclature RDC.');
     }
 }

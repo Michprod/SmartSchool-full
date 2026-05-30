@@ -7,6 +7,9 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 
+/**
+ * @deprecated Utiliser GradeSystemSeeder (class_subject). Conservé pour référence uniquement.
+ */
 class ClassTeacherRelationshipSeeder extends Seeder
 {
     /**

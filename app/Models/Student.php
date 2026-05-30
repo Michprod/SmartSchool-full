@@ -20,6 +20,10 @@ class Student extends Model
         'address',
         'city',
         'province',
+        'province_id',
+        'city_id',
+        'commune_id',
+        'quartier',
         'phone',
         'email',
         'parent_ids',
@@ -54,9 +58,10 @@ class Student extends Model
     }
 
     /**
-     * Obtenir le professeur titulaire de la classe de l'élève
+     * Obtenir le professeur titulaire de la classe de l'élève.
+     * Accessor (et non relation Eloquent directe).
      */
-    public function classPrincipalTeacher()
+    public function getClassPrincipalTeacherAttribute(): ?User
     {
         return $this->schoolClass?->teacher;
     }
@@ -81,13 +86,15 @@ class Student extends Model
             ]);
         }
 
-        // Ajouter les professeurs de matières
-        foreach ($this->schoolClass->activeSubjectTeachers as $teacher) {
-            $teachers->push([
-                'teacher' => $teacher,
-                'role' => 'matière',
-                'subject' => $teacher->pivot->subject,
-            ]);
+        // Ajouter les professeurs de matières (via class_subject)
+        foreach ($this->schoolClass->classSubjects()->where('is_active', true)->with(['teacher', 'subject'])->get() as $classSubject) {
+            if ($classSubject->teacher) {
+                $teachers->push([
+                    'teacher' => $classSubject->teacher,
+                    'role' => 'matière',
+                    'subject' => $classSubject->subject?->name,
+                ]);
+            }
         }
 
         return $teachers;
@@ -153,6 +160,22 @@ class Student extends Model
     public function reportCards()
     {
         return $this->hasMany(ReportCard::class);
+    }
+
+    /**
+     * Présences de l'élève
+     */
+    public function attendances()
+    {
+        return $this->hasMany(StudentAttendance::class);
+    }
+
+    /**
+     * Documents administratifs de l'élève
+     */
+    public function documents()
+    {
+        return $this->hasMany(StudentDocument::class);
     }
 
     /**

@@ -26,7 +26,8 @@ class UserController extends Controller
         
         $users = $query->select([
             'id', 'first_name', 'last_name', 'email', 'role', 'department',
-            'permissions', 'phone', 'avatar', 'is_active', 'last_login', 'created_at'
+            'permissions', 'phone', 'avatar', 'is_active', 'last_login', 'created_at',
+            'has_professional_profile', 'workload_hours', 'job_grade', 'job_title'
         ])->get();
         
         // Add role information to each user
@@ -52,6 +53,10 @@ class UserController extends Controller
             'password'   => 'required|string|min:8',
             'role'       => 'required|exists:roles,slug',
             'department' => 'nullable|string|max:255',
+            'has_professional_profile' => 'sometimes|boolean',
+            'workload_hours' => 'nullable|integer|min:0|max:120',
+            'job_grade' => 'nullable|string|max:100',
+            'job_title' => 'nullable|string|max:100',
             'permissions'=> 'nullable|array',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',
@@ -101,6 +106,10 @@ class UserController extends Controller
             'email'      => 'sometimes|email|unique:users,email,' . $id,
             'role'       => 'sometimes|exists:roles,slug',
             'department' => 'nullable|string|max:255',
+            'has_professional_profile' => 'sometimes|boolean',
+            'workload_hours' => 'nullable|integer|min:0|max:120',
+            'job_grade' => 'nullable|string|max:100',
+            'job_title' => 'nullable|string|max:100',
             'permissions'=> 'nullable|array',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',

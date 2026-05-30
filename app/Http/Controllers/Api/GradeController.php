@@ -9,6 +9,8 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\StudentAverage;
 use App\Models\ReportCard;
+use App\Services\AcademicPeriodService;
+use App\Services\BulletinAccessService;
 use App\Services\GradeCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,12 +18,11 @@ use Illuminate\Support\Facades\DB;
 
 class GradeController extends Controller
 {
-    protected $calculationService;
-
-    public function __construct(GradeCalculationService $calculationService)
-    {
-        $this->calculationService = $calculationService;
-    }
+    public function __construct(
+        protected GradeCalculationService $calculationService,
+        protected AcademicPeriodService $periods,
+        protected BulletinAccessService $bulletinAccess
+    ) {}
 
     // ============================================================
     // GESTION DES ÉVALUATIONS (NOTES)
@@ -75,8 +76,8 @@ class GradeController extends Controller
             'student_id' => 'required|exists:students,id',
             'subject_id' => 'required|exists:subjects,id',
             'class_id' => 'required|exists:school_classes,id',
-            'type' => 'required|in:interrogation,devoir,composition,examen,projet,participation',
-            'term' => 'required|in:T1,T2,T3',
+            'type' => 'required|'.$this->periods->assessmentTypeValidationRule(),
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
             'score' => 'required|numeric|min:0',
             'max_score' => 'required|numeric|min:1',
@@ -148,7 +149,7 @@ class GradeController extends Controller
             'title' => 'nullable|string|max:255',
             'comment' => 'nullable|string',
             'date' => 'sometimes|required|date',
-            'type' => 'sometimes|required|in:interrogation,devoir,composition,examen,projet,participation',
+            'type' => 'sometimes|required|'.$this->periods->assessmentTypeValidationRule(),
         ]);
 
         $assessment->update($validated);
@@ -207,8 +208,8 @@ class GradeController extends Controller
         $validated = $request->validate([
             'class_id' => 'required|exists:school_classes,id',
             'subject_id' => 'required|exists:subjects,id',
-            'type' => 'required|in:interrogation,devoir,composition,examen,projet,participation',
-            'term' => 'required|in:T1,T2,T3',
+            'type' => 'required|'.$this->periods->assessmentTypeValidationRule(),
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
             'max_score' => 'required|numeric|min:1',
             'coefficient' => 'nullable|numeric|min:0',
@@ -359,9 +360,13 @@ class GradeController extends Controller
         $student = Student::findOrFail($studentId);
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
         ]);
+
+        if (! $this->periods->isValidPeriodForStudent($student, $validated['term'])) {
+            return response()->json(['message' => 'Période invalide pour le cycle de cet élève.'], 422);
+        }
 
         // Vérifier que le professeur peut évaluer cet élève
         if (!$user->canGrade($student->class_id, 0) && !$user->hasRole('admin')) {
@@ -388,7 +393,7 @@ class GradeController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
         ]);
 
@@ -427,20 +432,16 @@ class GradeController extends Controller
     public function studentAverages(Request $request, int $studentId)
     {
         $user = Auth::user();
-        $student = Student::findOrFail($studentId);
+        $student = Student::with('schoolClass')->findOrFail($studentId);
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
         ]);
 
-        // Vérifier les droits d'accès
-        $isAuthorized = $user->hasRole('admin') ||
-            $user->canGrade($student->class_id, 0) ||
-            $student->classPrincipalTeacher?->id == $user->id;
-
-        if (!$isAuthorized) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        $access = $this->bulletinAccess->canViewStudentAcademicData($user, $student);
+        if (! $access['allowed']) {
+            return response()->json(['message' => $access['reason']], 403);
         }
 
         $averages = StudentAverage::where('student_id', $studentId)
@@ -472,7 +473,7 @@ class GradeController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
         ]);
 
@@ -542,7 +543,7 @@ class GradeController extends Controller
         $student = Student::findOrFail($studentId);
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
             'class_council_observation' => 'nullable|string',
             'work_recommendations' => 'nullable|string',
@@ -615,22 +616,12 @@ class GradeController extends Controller
     public function viewReportCard(Request $request, int $studentId)
     {
         $user = Auth::user();
-        $student = Student::findOrFail($studentId);
+        $student = Student::with('schoolClass')->findOrFail($studentId);
 
         $validated = $request->validate([
-            'term' => 'required|in:T1,T2,T3',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
             'academic_year' => 'required|string',
         ]);
-
-        // Vérifier les droits
-        $class = SchoolClass::findOrFail($student->class_id);
-        $isAuthorized = $user->hasRole('admin') ||
-            $class->teacher_id == $user->id ||
-            $user->canGrade($student->class_id, 0);
-
-        if (!$isAuthorized) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
 
         $reportCard = ReportCard::where('student_id', $studentId)
             ->where('term', $validated['term'])
@@ -638,8 +629,13 @@ class GradeController extends Controller
             ->with(['student', 'schoolClass', 'generatedBy'])
             ->first();
 
-        if (!$reportCard) {
+        if (! $reportCard) {
             return response()->json(['error' => 'Report card not found'], 404);
+        }
+
+        $access = $this->bulletinAccess->canViewStudentBulletin($user, $student, $reportCard);
+        if (! $access['allowed']) {
+            return response()->json(['message' => $access['reason']], 403);
         }
 
         // Récupérer les détails des moyennes
@@ -649,9 +645,54 @@ class GradeController extends Controller
             ->with('subject')
             ->get();
 
+        $scheme = $this->periods->schemeForStudent($student);
+
         return response()->json([
             'report_card' => $reportCard,
             'subject_averages' => $averages,
+            'rank_display' => $reportCard->class_rank
+                ? "{$reportCard->class_rank}/{$reportCard->total_students}"
+                : null,
+            'term_label' => $this->periods->periodLabel($validated['term'], $scheme),
+            'decision_label' => $reportCard->decision_label,
+        ]);
+    }
+
+    /**
+     * Publier un bulletin (visible aux parents).
+     */
+    public function publishReportCard(Request $request, int $studentId)
+    {
+        $user = Auth::user();
+        $student = Student::findOrFail($studentId);
+
+        $validated = $request->validate([
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+        ]);
+
+        $class = SchoolClass::findOrFail($student->class_id);
+        $isAuthorized = $class->teacher_id == $user->id || $user->hasRole('admin');
+
+        if (! $isAuthorized) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $reportCard = ReportCard::query()
+            ->where('student_id', $studentId)
+            ->where('term', $validated['term'])
+            ->where('academic_year', $validated['academic_year'])
+            ->first();
+
+        if (! $reportCard) {
+            return response()->json(['error' => 'Report card not found'], 404);
+        }
+
+        $reportCard->publish();
+
+        return response()->json([
+            'message' => 'Bulletin publié avec succès.',
+            'data' => $reportCard,
         ]);
     }
 }
