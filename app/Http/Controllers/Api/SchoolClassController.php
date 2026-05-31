@@ -79,9 +79,16 @@ class SchoolClassController extends Controller
         ))->response()->setStatusCode(201);
     }
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        $class = SchoolClass::with(['gradeLevel.educationCycle', 'studyOption', 'teacher'])
+        $relations = ['gradeLevel.educationCycle', 'studyOption', 'teacher'];
+
+        if ($request->boolean('include_subjects') || $request->input('include') === 'subjects') {
+            $relations[] = 'classSubjects.subject';
+            $relations[] = 'classSubjects.teacher';
+        }
+
+        $class = SchoolClass::with($relations)
             ->withCount('students')
             ->findOrFail($id);
 

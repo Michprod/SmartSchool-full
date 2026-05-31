@@ -382,3 +382,22 @@ curl -X POST http://localhost:8000/api/grades \
 2. **Calcul des moyennes:** Seules les évaluations publiées sont prises en compte
 3. **Rangs:** Calculés automatiquement avec gestion des ex-aequo
 4. **Décisions:** Déterminées automatiquement basé sur la moyenne générale et les matières en échec
+
+## Sessions d'évaluation (2026)
+
+### Table `evaluation_sessions`
+
+Organise interros, devoirs et examens séparément. Chaque session a un barème, une date et un type.
+
+- `POST /api/grades/evaluation-sessions` — créer session
+- `GET /api/grades/evaluation-sessions` — lister (filtres class/subject/term)
+- `POST /api/grades/evaluation-sessions/{id}/grades` — saisie bulk liée
+- `POST /api/grades/evaluation-sessions/{id}/publish` — publier
+- `GET /api/grades/grid` — grille élèves avec notes existantes
+
+### Conduite (bulletin)
+
+Table `conduct_grades` : appréciation saisie par le titulaire, injectée dans `behavior_recommendations` du bulletin.
+
+- `GET /api/classes/{class}/conduct`
+- `POST /api/classes/{class}/conduct/bulk`

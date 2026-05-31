@@ -14,6 +14,7 @@ class ClassSubject extends Model
         'teacher_id',
         'coefficient',
         'hours_per_week',
+        'schedule',
         'academic_year',
         'is_active',
     ];
@@ -22,6 +23,7 @@ class ClassSubject extends Model
         'coefficient' => 'integer',
         'hours_per_week' => 'integer',
         'is_active' => 'boolean',
+        'schedule' => 'array',
     ];
 
     /**

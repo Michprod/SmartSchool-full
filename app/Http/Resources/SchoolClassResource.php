@@ -41,6 +41,7 @@ class SchoolClassResource extends JsonResource
                 'first_name' => $this->teacher->first_name,
                 'last_name' => $this->teacher->last_name,
             ] : null),
+            'class_subjects' => ClassSubjectResource::collection($this->whenLoaded('classSubjects')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

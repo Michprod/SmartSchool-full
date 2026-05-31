@@ -22,6 +22,11 @@ class UserResource extends JsonResource
             'avatar' => $this->avatar,
             'department' => $this->department,
             'is_active' => $this->is_active,
+            'has_professional_profile' => $this->has_professional_profile,
+            'workload_hours' => $this->workload_hours,
+            'job_grade' => $this->job_grade,
+            'job_title' => $this->job_title,
+            'bio' => $this->bio,
             'all_permissions' => $this->all_permissions,
         ];
     }

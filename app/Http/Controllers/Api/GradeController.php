@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\ClassSubject;
+use App\Models\ConductGrade;
+use App\Models\EvaluationSession;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\StudentAverage;
@@ -215,6 +217,7 @@ class GradeController extends Controller
             'coefficient' => 'nullable|numeric|min:0',
             'title' => 'nullable|string|max:255',
             'date' => 'required|date',
+            'evaluation_session_id' => 'nullable|exists:evaluation_sessions,id',
             'grades' => 'required|array',
             'grades.*.student_id' => 'required|exists:students,id',
             'grades.*.score' => 'required|numeric|min:0',
@@ -226,12 +229,19 @@ class GradeController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        $session = null;
+        if (! empty($validated['evaluation_session_id'])) {
+            $session = EvaluationSession::findOrFail($validated['evaluation_session_id']);
+            if ($session->class_id != $validated['class_id'] || $session->subject_id != $validated['subject_id']) {
+                return response()->json(['error' => 'Session mismatch'], 422);
+            }
+        }
+
         $assessments = [];
 
-        DB::transaction(function () use ($validated, $user, &$assessments) {
+        DB::transaction(function () use ($validated, $user, $session, &$assessments) {
             foreach ($validated['grades'] as $grade) {
-                $assessments[] = Assessment::create([
-                    'student_id' => $grade['student_id'],
+                $payload = [
                     'subject_id' => $validated['subject_id'],
                     'teacher_id' => $user->id,
                     'class_id' => $validated['class_id'],
@@ -244,8 +254,22 @@ class GradeController extends Controller
                     'title' => $validated['title'] ?? null,
                     'comment' => $grade['comment'] ?? null,
                     'date' => $validated['date'],
-                    'is_published' => false,
-                ]);
+                    'is_published' => $session?->is_published ?? false,
+                    'evaluation_session_id' => $session?->id,
+                ];
+
+                if ($session) {
+                    $assessments[] = Assessment::updateOrCreate(
+                        [
+                            'student_id' => $grade['student_id'],
+                            'evaluation_session_id' => $session->id,
+                        ],
+                        $payload
+                    );
+                } else {
+                    $payload['student_id'] = $grade['student_id'];
+                    $assessments[] = Assessment::create($payload);
+                }
             }
         });
 
@@ -315,6 +339,77 @@ class GradeController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * Grille élèves avec notes existantes par type ou session
+     */
+    public function grid(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'class_id' => 'required|exists:school_classes,id',
+            'subject_id' => 'required|exists:subjects,id',
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+            'type' => 'nullable|'.$this->periods->assessmentTypeValidationRule(),
+            'evaluation_session_id' => 'nullable|exists:evaluation_sessions,id',
+        ]);
+
+        if (! $user->canGrade($validated['class_id'], $validated['subject_id']) && ! $user->hasRole('admin')) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $students = Student::where('class_id', $validated['class_id'])
+            ->where('is_active', true)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $query = Assessment::query()
+            ->where('class_id', $validated['class_id'])
+            ->where('subject_id', $validated['subject_id'])
+            ->where('term', $validated['term'])
+            ->where('academic_year', $validated['academic_year']);
+
+        if (! empty($validated['evaluation_session_id'])) {
+            $query->where('evaluation_session_id', $validated['evaluation_session_id']);
+        } elseif (! empty($validated['type'])) {
+            $query->where('type', $validated['type']);
+        }
+
+        $assessments = $query->get()->keyBy('student_id');
+
+        $rows = $students->map(function (Student $student) use ($assessments) {
+            $assessment = $assessments->get($student->id);
+
+            return [
+                'student' => [
+                    'id' => $student->id,
+                    'first_name' => $student->first_name,
+                    'last_name' => $student->last_name,
+                    'matricule' => $student->matricule,
+                ],
+                'assessment' => $assessment ? [
+                    'id' => $assessment->id,
+                    'score' => $assessment->score,
+                    'max_score' => $assessment->max_score,
+                    'type' => $assessment->type,
+                    'comment' => $assessment->comment,
+                    'is_published' => $assessment->is_published,
+                    'evaluation_session_id' => $assessment->evaluation_session_id,
+                ] : null,
+            ];
+        });
+
+        return response()->json([
+            'class_id' => (int) $validated['class_id'],
+            'subject_id' => (int) $validated['subject_id'],
+            'term' => $validated['term'],
+            'academic_year' => $validated['academic_year'],
+            'students' => $rows,
+        ]);
     }
 
     /**
@@ -582,6 +677,14 @@ class GradeController extends Controller
         // Déterminer la décision
         $decision = $this->calculationService->determineDecision($generalAverage, $failedSubjects);
 
+        $conductGrade = ConductGrade::where('student_id', $studentId)
+            ->where('term', $validated['term'])
+            ->where('academic_year', $validated['academic_year'])
+            ->first();
+
+        $behaviorRecommendations = $validated['behavior_recommendations']
+            ?? $conductGrade?->appreciation;
+
         // Créer ou mettre à jour le bulletin
         $reportCard = ReportCard::updateOrCreate(
             [
@@ -597,7 +700,7 @@ class GradeController extends Controller
                 'decision' => $decision,
                 'class_council_observation' => $validated['class_council_observation'] ?? null,
                 'work_recommendations' => $validated['work_recommendations'] ?? null,
-                'behavior_recommendations' => $validated['behavior_recommendations'] ?? null,
+                'behavior_recommendations' => $behaviorRecommendations,
                 'generated_by' => $user->id,
                 'generated_at' => now(),
                 'is_published' => false,

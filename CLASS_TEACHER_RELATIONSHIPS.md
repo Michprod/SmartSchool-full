@@ -262,5 +262,32 @@ Cela créera la table `class_teacher` avec :
 
 4. **Performance** : Utiliser `with()` pour eager loading et éviter le N+1 :
    ```php
-   SchoolClass::with(['teacher', 'subjectTeachers', 'students'])->get();
+   SchoolClass::with(['teacher', 'classSubjects.subject', 'classSubjects.teacher', 'students'])->get();
    ```
+
+## Module Enseignant (2026)
+
+### Table `class_subject` (remplace `class_teacher`)
+
+| Champ | Description |
+|-------|-------------|
+| `class_id`, `subject_id`, `teacher_id` | Affectation matière/classe/prof |
+| `coefficient`, `hours_per_week` | Poids pédagogique et charge |
+| `schedule` | Emploi du temps JSON par jour |
+| `academic_year`, `is_active` | Année et statut |
+
+### API affectations
+
+- `GET /api/classes/{class}/subjects` — matrice matières
+- `POST /api/classes/{class}/subjects` — créer affectation
+- `PUT /api/class-subjects/{id}` — modifier
+- `PUT /api/class-subjects/{id}/schedule` — emploi du temps
+- `DELETE /api/class-subjects/{id}` — désactiver si notes existent
+
+### API profil enseignant
+
+- `GET /api/teachers` — liste (admin)
+- `GET /api/teachers/{user}` — fiche complète
+- `GET /api/me/teaching-profile` — profil connecté
+- `GET /api/me/timetable` — EDT agrégé
+- `GET /api/teachers/workload-summary` — charge globale

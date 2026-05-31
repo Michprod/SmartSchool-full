@@ -37,6 +37,7 @@ class RolesSeeder extends Seeder
                     'communication:read',
                     'events:read',
                     'reports:*',
+                    'teachers:read',
                 ],
             ],
             [
@@ -49,6 +50,8 @@ class RolesSeeder extends Seeder
                     'classes:*',
                     'grades:*',
                     'discipline:read',
+                    'discipline:write',
+                    'conduct:write',
                 ],
             ],
             [
@@ -74,6 +77,8 @@ class RolesSeeder extends Seeder
                     'communication:write',
                     'events:read',
                     'discipline:write',
+                    'teachers:read',
+                    'teachers:write',
                 ],
             ],
             [

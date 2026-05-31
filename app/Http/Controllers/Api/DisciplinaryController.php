@@ -6,18 +6,38 @@ use App\Http\Controllers\Controller;
 use App\Models\DisciplinaryAction;
 use App\Models\DisciplinaryCase;
 use App\Models\DisciplinaryNote;
+use App\Models\SchoolClass;
+use App\Models\Student;
 use Illuminate\Http\Request;
 
 class DisciplinaryController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
         $query = DisciplinaryCase::with(['student', 'user', 'reporter', 'actions', 'notes.author']);
 
         foreach (['target_type', 'status', 'severity', 'category'] as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->string($filter));
             }
+        }
+
+        if ($request->filled('class_id')) {
+            $classId = (int) $request->class_id;
+            $query->where('target_type', 'student')
+                ->whereHas('student', fn ($q) => $q->where('class_id', $classId));
+        }
+
+        if ($user->hasRole('teacher') && ! $user->hasRole('admin')) {
+            $homeroomClassIds = SchoolClass::where('teacher_id', $user->id)->pluck('id');
+            $query->where(function ($q) use ($homeroomClassIds, $user) {
+                $q->where('reported_by', $user->id)
+                    ->orWhere(function ($sub) use ($homeroomClassIds) {
+                        $sub->where('target_type', 'student')
+                            ->whereHas('student', fn ($s) => $s->whereIn('class_id', $homeroomClassIds));
+                    });
+            });
         }
 
         return response()->json($query->latest()->paginate(20));
@@ -38,7 +58,19 @@ class DisciplinaryController extends Controller
             'incident_date' => 'nullable|date',
         ]);
 
-        $validated['reported_by'] = $request->user()?->id;
+        $user = $request->user();
+        $validated['reported_by'] = $user?->id;
+
+        if (($validated['target_type'] ?? '') === 'student' && ! empty($validated['student_id'])) {
+            $student = Student::findOrFail($validated['student_id']);
+            if ($user->hasRole('teacher') && ! $user->hasRole('admin')) {
+                $class = SchoolClass::find($student->class_id);
+                if (! $class || $class->teacher_id != $user->id) {
+                    return response()->json(['message' => 'Forbidden — titulaire de classe requis'], 403);
+                }
+            }
+        }
+
         $model = DisciplinaryCase::create($validated);
 
         return response()->json($model->load(['student', 'user', 'reporter']), 201);

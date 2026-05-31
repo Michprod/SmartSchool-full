@@ -11,6 +11,7 @@ class Assessment extends Model
         'subject_id',
         'teacher_id',
         'class_id',
+        'evaluation_session_id',
         'type',
         'term',
         'academic_year',
@@ -61,6 +62,11 @@ class Assessment extends Model
     public function schoolClass()
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function evaluationSession()
+    {
+        return $this->belongsTo(EvaluationSession::class);
     }
 
     /**
