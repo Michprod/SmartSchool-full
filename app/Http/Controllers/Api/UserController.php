@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\Personnel;
 use App\Models\RdcCity;
-use App\Models\RdcCommune;
 use App\Models\RdcProvince;
 use App\Models\User;
 use App\Models\Role;
@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    /** Roles creatable directly via Users module (no personnel record). */
+    private const ACCOUNT_ONLY_ROLES = ['admin', 'parent', 'inventory_manager'];
+
     /** Fields a user may update on their own profile without users:write. */
     private const SELF_SERVICE_FIELDS = [
         'first_name', 'last_name', 'email', 'phone', 'avatar',
@@ -24,83 +27,94 @@ class UserController extends Controller
 
     /** Fields restricted to users:write when editing another user. */
     private const ADMIN_ONLY_FIELDS = [
-        'role', 'department', 'has_professional_profile', 'workload_hours',
-        'job_grade', 'job_title', 'permissions', 'is_active',
+        'role', 'permissions', 'is_active',
     ];
 
     public function index(Request $request)
     {
-        if (!$request->user()->hasPermission('users:read')) {
+        if (! $request->user()->hasPermission('users:read')) {
             return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
         }
-        $query = User::query();
+
+        $query = User::query()->with('personnel');
+
         if ($request->has('role')) {
             $query->where('role', $request->role);
         }
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
-        
+
         $users = $query->select([
-            'id', 'first_name', 'last_name', 'email', 'role', 'department',
+            'id', 'first_name', 'last_name', 'email', 'role',
             'permissions', 'phone', 'avatar', 'is_active', 'last_login', 'created_at',
-            'has_professional_profile', 'workload_hours', 'job_grade', 'job_title'
         ])->get();
-        
-        // Add role information to each user
+
         $users->transform(function ($user) {
-            $role = \App\Models\Role::where('slug', $user->role)->first();
+            $role = Role::where('slug', $user->role)->first();
             $user->role_info = $role;
             $user->all_permissions = $user->getAllPermissions();
+            $user->personnel_id = $user->personnel?->id;
+            $user->personnel_summary = $user->personnel ? [
+                'id' => $user->personnel->id,
+                'staff_number' => $user->personnel->staff_number,
+                'staff_type' => $user->personnel->staff_type,
+                'full_name' => trim("{$user->personnel->first_name} {$user->personnel->last_name}"),
+            ] : null;
+
             return $user;
         });
-        
+
         return response()->json($users);
     }
 
     public function store(Request $request)
     {
-        if (!$request->user()->hasPermission('users:write')) {
+        if (! $request->user()->hasPermission('users:write')) {
             return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
         }
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users',
             'password'   => 'required|string|min:8',
             'role'       => 'required|exists:roles,slug',
-            'department' => 'nullable|string|max:255',
-            'has_professional_profile' => 'sometimes|boolean',
-            'workload_hours' => 'nullable|integer|min:0|max:120',
-            'job_grade' => 'nullable|string|max:100',
-            'job_title' => 'nullable|string|max:100',
             'permissions'=> 'nullable|array',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',
+            'is_active'  => 'sometimes|boolean',
         ]);
-        
-        if (!empty($validated['avatar']) && preg_match('/^data:image\/(\w+);base64,/', $validated['avatar'])) {
+
+        if (! in_array($validated['role'], self::ACCOUNT_ONLY_ROLES, true)) {
+            return response()->json([
+                'message' => 'Pour créer un enseignant ou staff, utilisez le module Personnel.',
+            ], 422);
+        }
+
+        if (! empty($validated['avatar']) && preg_match('/^data:image\/(\w+);base64,/', $validated['avatar'])) {
             $validated['avatar'] = $this->storeAvatar($validated['avatar']);
         }
         $validated['password'] = Hash::make($validated['password']);
 
         $user = User::create($validated);
-        
-        // Load role info
         $user->role_info = Role::where('slug', $user->role)->first();
         $user->all_permissions = $user->getAllPermissions();
-        
+
         return response()->json($user->makeHidden(['password', 'remember_token']), 201);
     }
 
     public function show(Request $request, string $id)
     {
-        $user = User::findOrFail($id);
-        if ($request->user()->id !== $user->id && !$request->user()->hasPermission('users:read')) {
+        $user = User::with('personnel')->findOrFail($id);
+        if ($request->user()->id !== $user->id && ! $request->user()->hasPermission('users:read')) {
             return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
         }
-        $user->role_info = \App\Models\Role::where('slug', $user->role)->first();
+
+        $user->role_info = Role::where('slug', $user->role)->first();
         $user->all_permissions = $user->getAllPermissions();
+        $user->personnel_id = $user->personnel?->id;
+
         return response()->json($user->makeHidden(['password', 'remember_token']));
     }
 
@@ -120,11 +134,6 @@ class UserController extends Controller
             'last_name'  => 'sometimes|string|max:255',
             'email'      => 'sometimes|email|unique:users,email,' . $id,
             'role'       => 'sometimes|exists:roles,slug',
-            'department' => 'nullable|string|max:255',
-            'has_professional_profile' => 'sometimes|boolean',
-            'workload_hours' => 'nullable|integer|min:0|max:120',
-            'job_grade' => 'nullable|string|max:100',
-            'job_title' => 'nullable|string|max:100',
             'permissions'=> 'nullable|array',
             'phone'      => 'nullable|string|max:50',
             'avatar'     => 'nullable|string',
@@ -150,33 +159,41 @@ class UserController extends Controller
             }
         }
 
+        if (isset($validated['role']) && ! in_array($validated['role'], self::ACCOUNT_ONLY_ROLES, true) && ! $user->personnel) {
+            return response()->json([
+                'message' => 'Assignez un rôle staff via le module Personnel.',
+            ], 422);
+        }
+
         if (! empty($validated['avatar']) && preg_match('/^data:image\/(\w+);base64,/', $validated['avatar'])) {
             $validated['avatar'] = $this->storeAvatar($validated['avatar']);
         }
 
         $validated = $this->syncGeoLabels($validated);
-
         $user->update($validated);
 
-        return new UserResource($user->fresh());
+        return new UserResource($user->fresh()->load('personnel'));
     }
 
     public function destroy(Request $request, string $id)
     {
-        if (!$request->user()->hasPermission('users:write')) {
+        if (! $request->user()->hasPermission('users:write')) {
             return response()->json(['message' => 'You do not have permission to access this resource.'], 403);
         }
         $user = User::findOrFail($id);
-        
-        // Prevent deleting yourself
-        $authenticatedUser = Auth::user();
-        if ($authenticatedUser && $user->id === $authenticatedUser->id) {
+
+        if (Auth::user() && $user->id === Auth::user()->id) {
+            return response()->json(['message' => 'Cannot delete your own account.'], 422);
+        }
+
+        if ($user->personnel) {
             return response()->json([
-                'message' => 'Cannot delete your own account.',
+                'message' => 'Ce compte est lié à une fiche personnel. Désactivez via le module Personnel.',
             ], 422);
         }
-        
+
         $user->delete();
+
         return response()->json(null, 204);
     }
 

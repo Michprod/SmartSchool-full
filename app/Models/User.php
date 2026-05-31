@@ -96,6 +96,11 @@ class User extends Authenticatable
         return $this->belongsTo(RdcCommune::class, 'commune_id');
     }
 
+    public function personnel()
+    {
+        return $this->hasOne(Personnel::class);
+    }
+
     /**
      * Check if user has a specific role
      */

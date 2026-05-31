@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\PersonnelConfigItem;
 use App\Models\User;
+use App\Services\PersonnelService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -23,7 +25,10 @@ class FreshStartSeeder extends Seeder
             FinanceCatalogSeeder::class,
         ]);
 
+        $this->seedPersonnelRef();
+
         User::query()->delete();
+        \App\Models\Personnel::query()->delete();
 
         User::create([
             'first_name' => 'Admin',
@@ -36,30 +41,33 @@ class FreshStartSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
-        $teacher1 = User::create([
+        /** @var PersonnelService $personnelService */
+        $personnelService = app(PersonnelService::class);
+
+        $teacher1 = $personnelService->createWithUser([
+            'staff_type' => 'teacher',
             'first_name' => 'Jean',
             'last_name' => 'Mukendi',
             'email' => 'jean.mukendi@smartschool.cd',
             'phone' => '+243 999 000 010',
-            'role' => 'teacher',
+            'password' => 'password',
             'department' => 'Sciences',
             'job_title' => 'Professeur de Mathématiques',
             'workload_hours' => 22,
             'is_active' => true,
-            'password' => Hash::make('password'),
         ]);
 
-        $teacher2 = User::create([
+        $teacher2 = $personnelService->createWithUser([
+            'staff_type' => 'teacher',
             'first_name' => 'Claire',
             'last_name' => 'Kabongo',
             'email' => 'claire.kabongo@smartschool.cd',
             'phone' => '+243 999 000 011',
-            'role' => 'teacher',
+            'password' => 'password',
             'department' => 'Lettres',
             'job_title' => 'Professeur de Français',
             'workload_hours' => 20,
             'is_active' => true,
-            'password' => Hash::make('password'),
         ]);
 
         $gradeLevel = \App\Models\GradeLevel::where('code', 'prim_6')->first();
@@ -71,10 +79,10 @@ class FreshStartSeeder extends Seeder
                 'section' => 'A',
                 'academic_year' => '2025-2026',
                 'capacity' => 35,
-                'teacher_id' => $teacher1->id,
+                'teacher_id' => $teacher1->user_id,
             ]);
         } elseif ($class) {
-            $class->update(['teacher_id' => $teacher1->id]);
+            $class->update(['teacher_id' => $teacher1->user_id]);
         }
 
         if ($class) {
@@ -90,7 +98,7 @@ class FreshStartSeeder extends Seeder
             \App\Models\ClassSubject::firstOrCreate(
                 ['class_id' => $class->id, 'subject_id' => $math->id, 'academic_year' => '2025-2026'],
                 [
-                    'teacher_id' => $teacher1->id,
+                    'teacher_id' => $teacher1->user_id,
                     'coefficient' => 4,
                     'hours_per_week' => 6,
                     'is_active' => true,
@@ -101,7 +109,7 @@ class FreshStartSeeder extends Seeder
             \App\Models\ClassSubject::firstOrCreate(
                 ['class_id' => $class->id, 'subject_id' => $fr->id, 'academic_year' => '2025-2026'],
                 [
-                    'teacher_id' => $teacher2->id,
+                    'teacher_id' => $teacher2->user_id,
                     'coefficient' => 3,
                     'hours_per_week' => 4,
                     'is_active' => true,
@@ -114,6 +122,27 @@ class FreshStartSeeder extends Seeder
         $this->command?->info('   Compte : admin@smartschool.cd / password');
         $this->command?->info('   Enseignants démo : jean.mukendi@ / claire.kabongo@ (password)');
         $this->command?->info('   Rôles : ' . \App\Models\Role::count() . ' profils RBAC créés.');
+        $this->command?->info('   Personnel : ' . \App\Models\Personnel::count());
         $this->command?->info('   Utilisateurs : ' . User::count());
+    }
+
+    private function seedPersonnelRef(): void
+    {
+        $items = [
+            ['type' => 'department', 'label' => 'Sciences'],
+            ['type' => 'department', 'label' => 'Lettres'],
+            ['type' => 'department', 'label' => 'Direction'],
+            ['type' => 'job_grade', 'label' => 'A1'],
+            ['type' => 'job_grade', 'label' => 'A2'],
+            ['type' => 'contract_type', 'label' => 'CDI'],
+            ['type' => 'contract_type', 'label' => 'CDD'],
+        ];
+
+        foreach ($items as $item) {
+            PersonnelConfigItem::firstOrCreate(
+                ['type' => $item['type'], 'label' => $item['label']],
+                ['is_active' => true]
+            );
+        }
     }
 }

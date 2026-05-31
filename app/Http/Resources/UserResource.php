@@ -50,6 +50,12 @@ class UserResource extends JsonResource
                 'name' => $role->name,
                 'description' => $role->description,
             ] : null,
+            'personnel_id' => $this->relationLoaded('personnel') ? $this->personnel?->id : null,
+            'personnel_summary' => $this->relationLoaded('personnel') && $this->personnel ? [
+                'id' => $this->personnel->id,
+                'staff_number' => $this->personnel->staff_number,
+                'staff_type' => $this->personnel->staff_type,
+            ] : null,
         ];
     }
 }

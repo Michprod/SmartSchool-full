@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
     // Current authenticated user
-    Route::get('/user', fn (Request $request) => new UserResource($request->user()->load([])));
+    Route::get('/user', fn (Request $request) => new UserResource($request->user()->load(['personnel'])));
     Route::put('me/password', [\App\Http\Controllers\Api\ProfilePasswordController::class, 'update']);
 
     // ---- Étudiants & Classes ----
@@ -33,6 +33,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('locations/provinces', [\App\Http\Controllers\Api\LocationController::class, 'provinces']);
     Route::get('locations/cities', [\App\Http\Controllers\Api\LocationController::class, 'cities']);
     Route::get('locations/communes', [\App\Http\Controllers\Api\LocationController::class, 'communes']);
+    Route::post('locations/provinces', [\App\Http\Controllers\Api\LocationController::class, 'storeProvince'])->middleware('permission:settings:write');
+    Route::put('locations/provinces/{province}', [\App\Http\Controllers\Api\LocationController::class, 'updateProvince'])->middleware('permission:settings:write');
+    Route::delete('locations/provinces/{province}', [\App\Http\Controllers\Api\LocationController::class, 'destroyProvince'])->middleware('permission:settings:write');
+    Route::post('locations/cities', [\App\Http\Controllers\Api\LocationController::class, 'storeCity'])->middleware('permission:settings:write');
+    Route::put('locations/cities/{city}', [\App\Http\Controllers\Api\LocationController::class, 'updateCity'])->middleware('permission:settings:write');
+    Route::delete('locations/cities/{city}', [\App\Http\Controllers\Api\LocationController::class, 'destroyCity'])->middleware('permission:settings:write');
+    Route::post('locations/communes', [\App\Http\Controllers\Api\LocationController::class, 'storeCommune'])->middleware('permission:settings:write');
+    Route::put('locations/communes/{commune}', [\App\Http\Controllers\Api\LocationController::class, 'updateCommune'])->middleware('permission:settings:write');
+    Route::delete('locations/communes/{commune}', [\App\Http\Controllers\Api\LocationController::class, 'destroyCommune'])->middleware('permission:settings:write');
 
     // ---- Classes scolaires (référentiel RDC) ----
     Route::get('classes/catalog', [\App\Http\Controllers\Api\SchoolClassController::class, 'catalog'])->middleware('permission:classes:read');
@@ -65,6 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('finance/config/fee-types', [\App\Http\Controllers\Api\FinanceConfigController::class, 'storeFeeType'])->middleware('permission:finance:write');
     Route::post('finance/config/installment-types', [\App\Http\Controllers\Api\FinanceConfigController::class, 'storeInstallmentType'])->middleware('permission:finance:write');
     Route::post('finance/config/fee-rates', [\App\Http\Controllers\Api\FinanceConfigController::class, 'storeFeeRate'])->middleware('permission:finance:write');
+    Route::put('finance/config/fee-rates/{feeRate}', [\App\Http\Controllers\Api\FinanceConfigController::class, 'updateFeeRate'])->middleware('permission:finance:write');
+    Route::delete('finance/config/fee-rates/{feeRate}', [\App\Http\Controllers\Api\FinanceConfigController::class, 'destroyFeeRate'])->middleware('permission:finance:write');
 
     // ---- Discipline ----
     Route::get('discipline/cases', [\App\Http\Controllers\Api\DisciplinaryController::class, 'index'])->middleware('permission:discipline:read');
@@ -97,7 +108,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update']);
     Route::delete('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'destroy'])->middleware('permission:users:write');
 
-    // ---- Enseignants (profil pédagogique) ----
+    // ---- Personnel (RH + enseignants) ----
+    Route::get('personnel/me', [\App\Http\Controllers\Api\PersonnelController::class, 'me']);
+    Route::get('personnel/workload-summary', [\App\Http\Controllers\Api\PersonnelController::class, 'workloadSummary'])->middleware('permission:personnel:read');
+    Route::get('personnel', [\App\Http\Controllers\Api\PersonnelController::class, 'index'])->middleware('permission:personnel:read');
+    Route::post('personnel', [\App\Http\Controllers\Api\PersonnelController::class, 'store'])->middleware('permission:personnel:write');
+    Route::get('personnel/{personnel}', [\App\Http\Controllers\Api\PersonnelController::class, 'show'])->middleware('permission:personnel:read');
+    Route::put('personnel/{personnel}', [\App\Http\Controllers\Api\PersonnelController::class, 'update'])->middleware('permission:personnel:write');
+    Route::delete('personnel/{personnel}', [\App\Http\Controllers\Api\PersonnelController::class, 'destroy'])->middleware('permission:personnel:write');
+    Route::get('personnel/{personnel}/teaching-profile', [\App\Http\Controllers\Api\PersonnelController::class, 'teachingProfile'])->middleware('permission:personnel:read');
+    Route::get('personnel/{personnel}/timetable', [\App\Http\Controllers\Api\PersonnelController::class, 'timetable'])->middleware('permission:personnel:read');
+
+    // ---- Setup / Configuration ----
+    Route::get('setup/status', [\App\Http\Controllers\Api\SetupStatusController::class, 'status'])->middleware('permission:settings:read');
+    Route::get('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'index'])->middleware('permission:settings:read');
+    Route::post('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'store'])->middleware('permission:settings:write');
+    Route::delete('config/personnel-ref/{item}', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'destroy'])->middleware('permission:settings:write');
+
+    // ---- Enseignants (profil pédagogique — legacy) ----
     Route::get('me/teaching-profile', [\App\Http\Controllers\Api\TeacherProfileController::class, 'myProfile']);
     Route::get('me/timetable', [\App\Http\Controllers\Api\TeacherProfileController::class, 'myTimetable']);
     Route::get('teachers/workload-summary', [\App\Http\Controllers\Api\TeacherProfileController::class, 'workloadSummary'])->middleware('permission:teachers:read');

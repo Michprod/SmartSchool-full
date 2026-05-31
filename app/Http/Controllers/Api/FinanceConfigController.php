@@ -55,4 +55,27 @@ class FinanceConfigController extends Controller
 
         return response()->json(FeeRate::create($validated)->load(['feeType', 'gradeLevel']), 201);
     }
+
+    public function updateFeeRate(Request $request, FeeRate $feeRate)
+    {
+        $validated = $request->validate([
+            'fee_type_id' => 'sometimes|exists:fee_types,id',
+            'academic_year' => 'sometimes|string|max:20',
+            'currency' => 'sometimes|in:CDF,USD',
+            'amount' => 'sometimes|numeric|min:0',
+            'grade_level_id' => 'nullable|exists:grade_levels,id',
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $feeRate->update($validated);
+
+        return response()->json($feeRate->load(['feeType', 'gradeLevel']));
+    }
+
+    public function destroyFeeRate(FeeRate $feeRate)
+    {
+        $feeRate->update(['is_active' => false]);
+
+        return response()->json(null, 204);
+    }
 }
