@@ -45,6 +45,10 @@ class User extends Authenticatable
         'address',
         'city',
         'province',
+        'province_id',
+        'city_id',
+        'commune_id',
+        'quartier',
         'bio',
     ];
 
@@ -73,7 +77,23 @@ class User extends Authenticatable
             'workload_hours' => 'integer',
             'permissions' => 'array',
             'last_login' => 'datetime',
+            'birth_date' => 'date',
         ];
+    }
+
+    public function rdcProvince()
+    {
+        return $this->belongsTo(RdcProvince::class, 'province_id');
+    }
+
+    public function rdcCity()
+    {
+        return $this->belongsTo(RdcCity::class, 'city_id');
+    }
+
+    public function rdcCommune()
+    {
+        return $this->belongsTo(RdcCommune::class, 'commune_id');
     }
 
     /**

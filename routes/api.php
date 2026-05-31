@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
     // Current authenticated user
-    Route::get('/user', fn (Request $request) => new UserResource($request->user()));
+    Route::get('/user', fn (Request $request) => new UserResource($request->user()->load([])));
+    Route::put('me/password', [\App\Http\Controllers\Api\ProfilePasswordController::class, 'update']);
 
     // ---- Étudiants & Classes ----
     Route::get('students', [\App\Http\Controllers\Api\StudentController::class, 'index'])->middleware('permission:students:read');
@@ -91,8 +92,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('users', [\App\Http\Controllers\Api\UserController::class, 'index'])->middleware('permission:users:read');
     Route::get('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'show'])->middleware('permission:users:read');
     Route::post('users', [\App\Http\Controllers\Api\UserController::class, 'store'])->middleware('permission:users:write');
-    Route::put('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update'])->middleware('permission:users:write');
-    Route::patch('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update'])->middleware('permission:users:write');
+    // Self-update allowed without users:write — authorization handled in UserController
+    Route::put('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update']);
+    Route::patch('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'update']);
     Route::delete('users/{user}', [\App\Http\Controllers\Api\UserController::class, 'destroy'])->middleware('permission:users:write');
 
     // ---- Enseignants (profil pédagogique) ----
