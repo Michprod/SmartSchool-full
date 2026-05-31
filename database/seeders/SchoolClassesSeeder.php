@@ -6,6 +6,7 @@ use App\Models\GradeLevel;
 use App\Models\SchoolClass;
 use App\Models\StudyOption;
 use App\Models\User;
+use App\Support\ClassNameBuilder;
 use Illuminate\Database\Seeder;
 
 class SchoolClassesSeeder extends Seeder
@@ -36,17 +37,21 @@ class SchoolClassesSeeder extends Seeder
 
         $i = 0;
         foreach ($definitions as $def) {
-            $gradeLevel = GradeLevel::where('code', $def['level'])->first();
+            $gradeLevel = GradeLevel::with('educationCycle')->where('code', $def['level'])->first();
             if (! $gradeLevel) {
                 continue;
             }
 
+            $studyOption = null;
             $studyOptionId = null;
             if (! empty($def['option'])) {
-                $studyOptionId = StudyOption::where('code', $def['option'])->value('id');
+                $studyOption = StudyOption::where('code', $def['option'])->first();
+                $studyOptionId = $studyOption?->id;
             }
 
             foreach ($def['sections'] as $section) {
+                $displayName = ClassNameBuilder::build($gradeLevel, $studyOption, $section);
+
                 SchoolClass::updateOrCreate(
                     [
                         'grade_level_id' => $gradeLevel->id,
@@ -55,6 +60,9 @@ class SchoolClassesSeeder extends Seeder
                         'academic_year' => $academicYear,
                     ],
                     [
+                        'name' => $displayName,
+                        'display_name' => $displayName,
+                        'level' => $gradeLevel->educationCycle?->name,
                         'capacity' => $def['capacity'],
                         'teacher_id' => $teachers->isNotEmpty()
                             ? $teachers->get($i % $teachers->count())?->id

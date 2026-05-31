@@ -10,7 +10,7 @@ class StudentsSeeder extends Seeder
 {
     public function run(): void
     {
-        $classes = SchoolClass::all()->keyBy('name');
+        $classes = $this->buildClassLookup();
 
         $students = [
             // 1ère Maternelle
@@ -126,5 +126,54 @@ class StudentsSeeder extends Seeder
         }
 
         $this->command->info("✅ {$count} élèves créés.");
+    }
+
+    /**
+     * Résout les classes démo via codes RDC (section A par défaut).
+     */
+    private function buildClassLookup(): \Illuminate\Support\Collection
+    {
+        $legacyMap = [
+            '1ère Maternelle' => ['level' => 'mat_ps', 'section' => 'A'],
+            '2ème Maternelle' => ['level' => 'mat_ms', 'section' => 'A'],
+            '3ème Maternelle' => ['level' => 'mat_gs', 'section' => 'A'],
+            '1ère Primaire' => ['level' => 'prim_1', 'section' => 'A'],
+            '2ème Primaire' => ['level' => 'prim_2', 'section' => 'A'],
+            '3ème Primaire' => ['level' => 'prim_3', 'section' => 'A'],
+            '4ème Primaire' => ['level' => 'prim_4', 'section' => 'A'],
+            '5ème Primaire' => ['level' => 'prim_5', 'section' => 'A'],
+            '6ème Primaire' => ['level' => 'prim_6', 'section' => 'A'],
+            '7ème Éducation de Base' => ['level' => 'cteb_7', 'section' => 'A'],
+            '8ème Éducation de Base' => ['level' => 'cteb_8', 'section' => 'A'],
+            '1ère Humanités' => ['level' => 'hum_1', 'option' => 'opt_elec', 'section' => 'A'],
+            '2ème Humanités' => ['level' => 'hum_2', 'option' => 'opt_elec', 'section' => 'A'],
+            '3ème Humanités' => ['level' => 'hum_3', 'option' => 'opt_sci_mp', 'section' => 'A'],
+            '4ème Humanités' => ['level' => 'hum_4', 'option' => 'opt_com', 'section' => 'A'],
+        ];
+
+        $all = SchoolClass::with(['gradeLevel', 'studyOption'])->get();
+        $lookup = collect();
+
+        foreach ($legacyMap as $legacyName => $criteria) {
+            $match = $all->first(function (SchoolClass $class) use ($criteria) {
+                if ($class->gradeLevel?->code !== $criteria['level']) {
+                    return false;
+                }
+                if (($criteria['section'] ?? 'A') !== $class->section) {
+                    return false;
+                }
+                if (! empty($criteria['option'])) {
+                    return $class->studyOption?->code === $criteria['option'];
+                }
+
+                return $class->study_option_id === null;
+            });
+
+            if ($match) {
+                $lookup->put($legacyName, $match);
+            }
+        }
+
+        return $lookup;
     }
 }
