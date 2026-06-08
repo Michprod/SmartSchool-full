@@ -276,6 +276,72 @@ class User extends Authenticatable
     }
 
     /**
+     * IDs des classes accessibles (matières enseignées + classe titulaire).
+     *
+     * @return array<int>
+     */
+    public function accessibleClassIds(?string $academicYear = null): array
+    {
+        return collect($this->myClassesAssignmentGroups($academicYear))
+            ->map(fn (array $group) => $group['class']->id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Groupes classe + matières pour l'API my-classes (inclut titulaire sans matière).
+     *
+     * @return array<int, array{class: SchoolClass, is_principal: bool, subjects: \Illuminate\Support\Collection}>
+     */
+    public function myClassesAssignmentGroups(?string $academicYear = null): array
+    {
+        $classSubjects = ClassSubject::where('teacher_id', $this->id)
+            ->where('is_active', true)
+            ->when($academicYear, fn ($q) => $q->where('academic_year', $academicYear))
+            ->with(['schoolClass', 'subject'])
+            ->get()
+            ->groupBy('class_id');
+
+        $result = [];
+        $seenClassIds = [];
+
+        foreach ($classSubjects as $classId => $items) {
+            $class = $items->first()->schoolClass;
+            if (! $class) {
+                continue;
+            }
+            $seenClassIds[] = (int) $classId;
+            $result[] = [
+                'class' => $class,
+                'is_principal' => (int) $class->teacher_id === (int) $this->id,
+                'subjects' => $items->map(fn (ClassSubject $item) => [
+                    'subject' => $item->subject,
+                    'coefficient' => $item->coefficient,
+                    'hours_per_week' => $item->hours_per_week,
+                    'academic_year' => $item->academic_year,
+                ])->values(),
+            ];
+        }
+
+        $principalQuery = SchoolClass::query()->where('teacher_id', $this->id);
+        if ($academicYear) {
+            $principalQuery->where('academic_year', $academicYear);
+        }
+        $principalClass = $principalQuery->first();
+
+        if ($principalClass && ! in_array((int) $principalClass->id, $seenClassIds, true)) {
+            $result[] = [
+                'class' => $principalClass,
+                'is_principal' => true,
+                'subjects' => collect(),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Vérifier si un professeur peut noter une classe/matière spécifique
      */
     public function canGrade(int $classId, int $subjectId): bool

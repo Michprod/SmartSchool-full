@@ -7,7 +7,6 @@ use App\Models\RdcCity;
 use App\Models\RdcProvince;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class PersonnelService
@@ -25,7 +24,8 @@ class PersonnelService
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],
-                'password' => Hash::make($data['password']),
+                // Le modèle `User` a le cast `password => hashed`, donc on ne hash pas ici.
+                'password' => $data['password'],
                 'role' => $role,
                 'phone' => $data['phone'] ?? null,
                 'avatar' => $this->processAvatar($data['avatar'] ?? null),

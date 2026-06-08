@@ -7,9 +7,14 @@ use App\Http\Resources\SchoolClassResource;
 use App\Http\Resources\StudentResource;
 use App\Models\EducationCycle;
 use App\Models\GradeLevel;
+use App\Models\ClassSubject;
 use App\Models\SchoolClass;
+use App\Models\Setting;
 use App\Models\StudyOption;
+use App\Services\SubjectEligibilityService;
+use App\Services\TimetableService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SchoolClassController extends Controller
 {
@@ -61,6 +66,13 @@ class SchoolClassController extends Controller
             $query->where('section', $request->section);
         }
 
+        $user = Auth::user();
+        if ($user && $user->role === 'teacher' && ! $user->hasAnyRole(['admin', 'director', 'secretary'])) {
+            $year = $request->get('academic_year') ?: $this->defaultAcademicYear();
+            $ids = $user->accessibleClassIds($year);
+            $query->whereIn('id', $ids ?: [0]);
+        }
+
         $perPage = min((int) $request->get('per_page', 50), 100);
 
         return SchoolClassResource::collection(
@@ -102,6 +114,34 @@ class SchoolClassController extends Controller
         return StudentResource::collection(
             $class->students()->with('schoolClass')->orderBy('last_name')->get()
         );
+    }
+
+    public function availableSubjects(string $id, SubjectEligibilityService $eligibility)
+    {
+        $class = SchoolClass::findOrFail($id);
+
+        return response()->json($eligibility->forClass($class)->values());
+    }
+
+    public function timetable(Request $request, string $id, TimetableService $timetable)
+    {
+        $class = SchoolClass::findOrFail($id);
+        $year = $request->string('academic_year')->toString() ?: null;
+
+        $assignments = ClassSubject::query()
+            ->where('class_id', $class->id)
+            ->where('is_active', true)
+            ->when($year, fn ($q) => $q->where('academic_year', $year))
+            ->with(['schoolClass', 'subject', 'teacher'])
+            ->get();
+
+        return response()->json([
+            'class_id' => $class->id,
+            'class_name' => $class->display_name ?? $class->name,
+            'academic_year' => $year,
+            'slots' => $timetable->flattenSlots($assignments),
+            'assignments_count' => $assignments->count(),
+        ]);
     }
 
     public function update(Request $request, string $id)
@@ -173,5 +213,19 @@ class SchoolClassController extends Controller
         }
 
         return $validated;
+    }
+
+    protected function defaultAcademicYear(): string
+    {
+        $setting = Setting::where('key', 'school_settings')->first();
+        $value = $setting?->value;
+
+        if (is_array($value) && ! empty($value['currentYear'])) {
+            return (string) $value['currentYear'];
+        }
+
+        $y = (int) date('Y');
+
+        return $y.'-'.($y + 1);
     }
 }

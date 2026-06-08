@@ -5,15 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Assessment;
 use App\Models\ClassSubject;
-use App\Models\ConductGrade;
 use App\Models\EvaluationSession;
 use App\Models\SchoolClass;
+use App\Models\Setting;
 use App\Models\Student;
 use App\Models\StudentAverage;
 use App\Models\ReportCard;
 use App\Services\AcademicPeriodService;
 use App\Services\BulletinAccessService;
 use App\Services\GradeCalculationService;
+use App\Services\ReportCardPdfService;
+use App\Services\ReportCardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +25,26 @@ class GradeController extends Controller
     public function __construct(
         protected GradeCalculationService $calculationService,
         protected AcademicPeriodService $periods,
-        protected BulletinAccessService $bulletinAccess
+        protected BulletinAccessService $bulletinAccess,
+        protected ReportCardService $reportCards,
+        protected ReportCardPdfService $reportCardPdf
     ) {}
+
+    public function schoolYear()
+    {
+        $setting = Setting::where('key', 'school_settings')->first();
+        $value = $setting?->value;
+        $year = is_array($value) && ! empty($value['currentYear'])
+            ? (string) $value['currentYear']
+            : null;
+
+        if (! $year) {
+            $y = (int) date('Y');
+            $year = $y.'-'.($y + 1);
+        }
+
+        return response()->json(['academic_year' => $year]);
+    }
 
     // ============================================================
     // GESTION DES ÉVALUATIONS (NOTES)
@@ -286,19 +306,21 @@ class GradeController extends Controller
     /**
      * Obtenir les classes et matières où le professeur enseigne
      */
-    public function myClasses()
+    public function myClasses(Request $request)
     {
         $user = Auth::user();
+        $academicYear = $request->string('academic_year')->toString() ?: null;
 
-        // If admin, show all classes
         if ($user->hasRole('admin')) {
-            $classes = SchoolClass::all();
+            $classes = SchoolClass::when($academicYear, fn ($q) => $q->where('academic_year', $academicYear))->get();
             $result = [];
             foreach ($classes as $class) {
                 $result[] = [
                     'class' => $class,
+                    'is_principal' => false,
                     'subjects' => ClassSubject::where('class_id', $class->id)
                         ->where('is_active', true)
+                        ->when($academicYear, fn ($q) => $q->where('academic_year', $academicYear))
                         ->with('subject')
                         ->get()
                         ->map(function ($item) {
@@ -311,34 +333,11 @@ class GradeController extends Controller
                         }),
                 ];
             }
+
             return response()->json($result);
         }
 
-        $classSubjects = ClassSubject::where('teacher_id', $user->id)
-            ->where('is_active', true)
-            ->with(['schoolClass', 'subject'])
-            ->get()
-            ->groupBy('class_id');
-
-        $result = [];
-        foreach ($classSubjects as $classId => $items) {
-            $class = $items->first()->schoolClass;
-            if (!$class) continue;
-            
-            $result[] = [
-                'class' => $class,
-                'subjects' => $items->map(function ($item) {
-                    return [
-                        'subject' => $item->subject,
-                        'coefficient' => $item->coefficient,
-                        'hours_per_week' => $item->hours_per_week,
-                        'academic_year' => $item->academic_year,
-                    ];
-                }),
-            ];
-        }
-
-        return response()->json($result);
+        return response()->json($user->myClassesAssignmentGroups($academicYear));
     }
 
     /**
@@ -653,64 +652,96 @@ class GradeController extends Controller
             return response()->json(['error' => 'Unauthorized - Only class principal or admin can generate report cards'], 403);
         }
 
-        // Récupérer les moyennes
-        $averages = StudentAverage::where('student_id', $studentId)
-            ->where('term', $validated['term'])
-            ->where('academic_year', $validated['academic_year'])
-            ->get();
+        $result = $this->reportCards->generateForStudent(
+            $student,
+            $user,
+            $validated['term'],
+            $validated['academic_year'],
+            [
+                'class_council_observation' => $validated['class_council_observation'] ?? null,
+                'work_recommendations' => $validated['work_recommendations'] ?? null,
+                'behavior_recommendations' => $validated['behavior_recommendations'] ?? null,
+            ]
+        );
 
-        if ($averages->isEmpty()) {
+        if (! $result['ok']) {
             return response()->json(['error' => 'No averages found. Please calculate averages first.'], 400);
         }
 
-        $generalAverage = $averages->first()->general_average;
-        $classRank = $averages->first()->class_rank;
-        $totalStudents = $averages->first()->total_students;
+        return response()->json([
+            'message' => 'Report card generated successfully',
+            'data' => $result['report_card']->load(['student', 'schoolClass']),
+        ]);
+    }
 
-        // Compter les matières en échec
-        $failedSubjects = $this->calculationService->countFailedSubjects(
-            $studentId,
+    /**
+     * Générer les bulletins pour toute la classe (élèves avec moyennes calculées).
+     */
+    public function generateClassReportCards(Request $request, int $classId)
+    {
+        $user = Auth::user();
+        $class = SchoolClass::findOrFail($classId);
+
+        if (! $this->canManageClassReportCards($class, $user)) {
+            return response()->json([
+                'error' => 'Unauthorized - Only class principal or admin can generate report cards',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+        ]);
+
+        $result = $this->reportCards->generateForClass(
+            $classId,
+            $user,
             $validated['term'],
             $validated['academic_year']
         );
 
-        // Déterminer la décision
-        $decision = $this->calculationService->determineDecision($generalAverage, $failedSubjects);
+        return response()->json([
+            'message' => 'Report cards generated',
+            'generated_count' => $result['generated_count'],
+            'errors' => $result['errors'],
+        ]);
+    }
 
-        $conductGrade = ConductGrade::where('student_id', $studentId)
-            ->where('term', $validated['term'])
-            ->where('academic_year', $validated['academic_year'])
-            ->first();
+    /**
+     * Publier tous les bulletins générés de la classe.
+     */
+    public function publishClassReportCards(Request $request, int $classId)
+    {
+        $user = Auth::user();
+        $class = SchoolClass::findOrFail($classId);
 
-        $behaviorRecommendations = $validated['behavior_recommendations']
-            ?? $conductGrade?->appreciation;
+        if (! $this->canManageClassReportCards($class, $user)) {
+            return response()->json([
+                'error' => 'Unauthorized - Only class principal or admin can publish report cards',
+            ], 403);
+        }
 
-        // Créer ou mettre à jour le bulletin
-        $reportCard = ReportCard::updateOrCreate(
-            [
-                'student_id' => $studentId,
-                'term' => $validated['term'],
-                'academic_year' => $validated['academic_year'],
-            ],
-            [
-                'class_id' => $student->class_id,
-                'general_average' => $generalAverage,
-                'class_rank' => $classRank,
-                'total_students' => $totalStudents,
-                'decision' => $decision,
-                'class_council_observation' => $validated['class_council_observation'] ?? null,
-                'work_recommendations' => $validated['work_recommendations'] ?? null,
-                'behavior_recommendations' => $behaviorRecommendations,
-                'generated_by' => $user->id,
-                'generated_at' => now(),
-                'is_published' => false,
-            ]
+        $validated = $request->validate([
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+        ]);
+
+        $result = $this->reportCards->publishForClass(
+            $classId,
+            $validated['term'],
+            $validated['academic_year']
         );
 
         return response()->json([
-            'message' => 'Report card generated successfully',
-            'data' => $reportCard->load(['student', 'schoolClass'])
+            'message' => 'Report cards published',
+            'published_count' => $result['published_count'],
+            'errors' => $result['errors'],
         ]);
+    }
+
+    protected function canManageClassReportCards(SchoolClass $class, $user): bool
+    {
+        return (int) $class->teacher_id === (int) $user->id || $user->hasRole('admin');
     }
 
     /**
@@ -758,6 +789,45 @@ class GradeController extends Controller
                 : null,
             'term_label' => $this->periods->periodLabel($validated['term'], $scheme),
             'decision_label' => $reportCard->decision_label,
+            'pdf_download_url' => url("/api/grades/students/{$studentId}/report-card/pdf")
+                .'?term='.urlencode($validated['term'])
+                .'&academic_year='.urlencode($validated['academic_year']),
+        ]);
+    }
+
+    /**
+     * Télécharger le bulletin PDF d'un élève.
+     */
+    public function downloadReportCardPdf(Request $request, int $studentId)
+    {
+        $user = Auth::user();
+        $student = Student::with('schoolClass')->findOrFail($studentId);
+
+        $validated = $request->validate([
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+        ]);
+
+        $reportCard = ReportCard::where('student_id', $studentId)
+            ->where('term', $validated['term'])
+            ->where('academic_year', $validated['academic_year'])
+            ->first();
+
+        if (! $reportCard) {
+            return response()->json(['error' => 'Report card not found'], 404);
+        }
+
+        $access = $this->bulletinAccess->canViewStudentBulletin($user, $student, $reportCard);
+        if (! $access['allowed']) {
+            return response()->json(['message' => $access['reason']], 403);
+        }
+
+        $pdfContent = $this->reportCardPdf->resolvePdfContent($reportCard, $student);
+        $filename = $this->reportCardPdf->downloadFilename($reportCard, $student);
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 

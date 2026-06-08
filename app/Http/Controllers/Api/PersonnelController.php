@@ -9,6 +9,7 @@ use App\Models\Personnel;
 use App\Services\PersonnelService;
 use App\Services\TeacherProfileService;
 use App\Services\TeacherWorkloadService;
+use App\Services\TimetableService;
 use Illuminate\Http\Request;
 
 class PersonnelController extends Controller
@@ -16,7 +17,8 @@ class PersonnelController extends Controller
     public function __construct(
         protected PersonnelService $personnelService,
         protected TeacherProfileService $teacherProfiles,
-        protected TeacherWorkloadService $workload
+        protected TeacherWorkloadService $workload,
+        protected TimetableService $timetable
     ) {}
 
     public function index(Request $request)
@@ -176,36 +178,13 @@ class PersonnelController extends Controller
             ->where('teacher_id', $user->id)
             ->where('is_active', true)
             ->when($year, fn ($q) => $q->where('academic_year', $year))
-            ->with(['schoolClass', 'subject'])
+            ->with(['schoolClass', 'subject', 'teacher'])
             ->get();
-
-        $slots = [];
-        foreach ($assignments as $assignment) {
-            if (! is_array($assignment->schedule)) {
-                continue;
-            }
-            foreach ($assignment->schedule as $day => $daySlots) {
-                if (! is_array($daySlots)) {
-                    continue;
-                }
-                foreach ($daySlots as $slot) {
-                    $slots[] = [
-                        'day' => $day,
-                        'start' => $slot['start'] ?? null,
-                        'end' => $slot['end'] ?? null,
-                        'room' => $slot['room'] ?? null,
-                        'class_id' => $assignment->class_id,
-                        'class_name' => $assignment->schoolClass?->display_name ?? $assignment->schoolClass?->name,
-                        'subject_name' => $assignment->subject?->name,
-                    ];
-                }
-            }
-        }
 
         return response()->json([
             'personnel_id' => $personnel->id,
             'principal_class' => $user->principalClass,
-            'slots' => $slots,
+            'slots' => $this->timetable->flattenSlots($assignments),
             'assignments_count' => $assignments->count(),
         ]);
     }

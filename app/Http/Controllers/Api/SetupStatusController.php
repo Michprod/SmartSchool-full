@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClassSubject;
 use App\Models\EducationCycle;
 use App\Models\FeeRate;
 use App\Models\FeeType;
 use App\Models\Personnel;
+use App\Models\PersonnelConfigItem;
 use App\Models\RdcProvince;
 use App\Models\Role;
 use App\Models\SchoolClass;
@@ -30,7 +32,9 @@ class SetupStatusController extends Controller
             ['key' => 'fee_rates', 'label' => 'Barèmes finance', 'ok' => FeeRate::where('is_active', true)->count() >= 1],
             ['key' => 'subjects', 'label' => 'Matières', 'ok' => Subject::count() >= 1],
             ['key' => 'classes', 'label' => 'Classes', 'ok' => SchoolClass::count() >= 1],
+            ['key' => 'class_assignments', 'label' => 'Affectations enseignants', 'ok' => ClassSubject::where('is_active', true)->exists()],
             ['key' => 'personnel', 'label' => 'Personnel enseignant', 'ok' => $teacherCount >= 1],
+            ['key' => 'personnel_ref', 'label' => 'Référentiel RH', 'ok' => PersonnelConfigItem::where('is_active', true)->count() >= 3],
         ];
 
         $ready = collect($checks)->every(fn ($c) => $c['ok']);

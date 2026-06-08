@@ -8,7 +8,7 @@ use App\Models\Student;
 use App\Models\StudentAverage;
 use App\Services\AcademicPeriodService;
 use App\Services\AcademicProfileService;
-use App\Services\BulletinAccessService;
+use App\Services\ReportCardPdfService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,7 +17,8 @@ class ParentAcademicController extends Controller
     public function __construct(
         protected AcademicPeriodService $periods,
         protected AcademicProfileService $profiles,
-        protected BulletinAccessService $bulletinAccess
+        protected BulletinAccessService $bulletinAccess,
+        protected ReportCardPdfService $reportCardPdf
     ) {}
 
     /**
@@ -138,6 +139,45 @@ class ParentAcademicController extends Controller
             'rank_display' => $reportCard->class_rank
                 ? "{$reportCard->class_rank}/{$reportCard->total_students}"
                 : null,
+        ]);
+    }
+
+    /**
+     * Télécharger le bulletin PDF publié d'un enfant.
+     */
+    public function downloadChildReportCardPdf(Request $request, int $studentId)
+    {
+        $student = $this->resolveChild($studentId);
+        if ($student instanceof \Illuminate\Http\JsonResponse) {
+            return $student;
+        }
+
+        $validated = $request->validate([
+            'term' => 'required|'.$this->periods->periodValidationRule(),
+            'academic_year' => 'required|string',
+        ]);
+
+        $reportCard = ReportCard::query()
+            ->where('student_id', $studentId)
+            ->where('term', $validated['term'])
+            ->where('academic_year', $validated['academic_year'])
+            ->first();
+
+        if (! $reportCard) {
+            return response()->json(['message' => 'Bulletin non disponible.'], 404);
+        }
+
+        $access = $this->bulletinAccess->canViewStudentBulletin(Auth::user(), $student, $reportCard);
+        if (! $access['allowed']) {
+            return response()->json(['message' => $access['reason']], 403);
+        }
+
+        $pdfContent = $this->reportCardPdf->resolvePdfContent($reportCard, $student);
+        $filename = $this->reportCardPdf->downloadFilename($reportCard, $student);
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 

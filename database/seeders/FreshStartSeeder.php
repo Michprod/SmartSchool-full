@@ -2,11 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\PersonnelConfigItem;
 use App\Models\User;
 use App\Services\PersonnelService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * Environnement de test vierge : rôles RBAC + un seul administrateur.
@@ -23,9 +21,12 @@ class FreshStartSeeder extends Seeder
             RdcEducationCatalogSeeder::class,
             RdcGeoSeeder::class,
             FinanceCatalogSeeder::class,
+            PersonnelConfigSeeder::class,
+            SchoolSettingsSeeder::class,
+            FeeRatesSeeder::class,
         ]);
 
-        $this->seedPersonnelRef();
+        // Les références RH (département, grade, contrat) sont seedées par PersonnelConfigSeeder.
 
         User::query()->delete();
         \App\Models\Personnel::query()->delete();
@@ -38,7 +39,7 @@ class FreshStartSeeder extends Seeder
             'role' => 'admin',
             'department' => 'Direction',
             'is_active' => true,
-            'password' => Hash::make('password'),
+            'password' => 'password',
         ]);
 
         /** @var PersonnelService $personnelService */
@@ -126,23 +127,6 @@ class FreshStartSeeder extends Seeder
         $this->command?->info('   Utilisateurs : ' . User::count());
     }
 
-    private function seedPersonnelRef(): void
-    {
-        $items = [
-            ['type' => 'department', 'label' => 'Sciences'],
-            ['type' => 'department', 'label' => 'Lettres'],
-            ['type' => 'department', 'label' => 'Direction'],
-            ['type' => 'job_grade', 'label' => 'A1'],
-            ['type' => 'job_grade', 'label' => 'A2'],
-            ['type' => 'contract_type', 'label' => 'CDI'],
-            ['type' => 'contract_type', 'label' => 'CDD'],
-        ];
-
-        foreach ($items as $item) {
-            PersonnelConfigItem::firstOrCreate(
-                ['type' => $item['type'], 'label' => $item['label']],
-                ['is_active' => true]
-            );
-        }
-    }
+    // seedPersonnelRef a été déplacé dans PersonnelConfigSeeder.
 }
+

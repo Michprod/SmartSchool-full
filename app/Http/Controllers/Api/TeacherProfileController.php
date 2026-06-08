@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\TeacherProfileService;
 use App\Services\TeacherWorkloadService;
+use App\Services\TimetableService;
 use Illuminate\Http\Request;
 
 class TeacherProfileController extends Controller
 {
     public function __construct(
         protected TeacherProfileService $profiles,
-        protected TeacherWorkloadService $workload
+        protected TeacherWorkloadService $workload,
+        protected TimetableService $timetable
     ) {}
 
     public function index(Request $request)
@@ -108,36 +110,40 @@ class TeacherProfileController extends Controller
             ->where('teacher_id', $user->id)
             ->where('is_active', true)
             ->when($year, fn ($q) => $q->where('academic_year', $year))
-            ->with(['schoolClass', 'subject'])
+            ->with(['schoolClass', 'subject', 'teacher'])
             ->get();
-
-        $slots = [];
-        foreach ($assignments as $assignment) {
-            if (! is_array($assignment->schedule)) {
-                continue;
-            }
-            foreach ($assignment->schedule as $day => $daySlots) {
-                if (! is_array($daySlots)) {
-                    continue;
-                }
-                foreach ($daySlots as $slot) {
-                    $slots[] = [
-                        'day' => $day,
-                        'start' => $slot['start'] ?? null,
-                        'end' => $slot['end'] ?? null,
-                        'room' => $slot['room'] ?? null,
-                        'class_id' => $assignment->class_id,
-                        'class_name' => $assignment->schoolClass?->display_name ?? $assignment->schoolClass?->name,
-                        'subject_name' => $assignment->subject?->name,
-                    ];
-                }
-            }
-        }
 
         return response()->json([
             'principal_class' => $user->principalClass,
-            'slots' => $slots,
+            'slots' => $this->timetable->flattenSlots($assignments),
             'assignments_count' => $assignments->count(),
         ]);
+    }
+
+    public function myClasses(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->hasAnyRole(['teacher', 'admin'])) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $year = $request->string('academic_year')->toString() ?: null;
+        $groups = $user->myClassesAssignmentGroups($year);
+
+        $payload = collect($groups)->map(function (array $group) {
+            /** @var \App\Models\SchoolClass $class */
+            $class = $group['class'];
+            $class->loadCount('students');
+
+            return [
+                'class' => $class,
+                'students_count' => $class->students_count,
+                'is_principal' => $group['is_principal'],
+                'subjects' => $group['subjects'],
+            ];
+        })->values();
+
+        return response()->json($payload);
     }
 }

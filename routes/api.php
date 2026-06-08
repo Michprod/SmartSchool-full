@@ -52,7 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('classes/{class}', [\App\Http\Controllers\Api\SchoolClassController::class, 'update'])->middleware('permission:classes:write');
     Route::delete('classes/{class}', [\App\Http\Controllers\Api\SchoolClassController::class, 'destroy'])->middleware('permission:classes:write');
     Route::get('classes/{class}/students', [\App\Http\Controllers\Api\SchoolClassController::class, 'students'])->middleware('permission:classes:read');
+    Route::get('classes/{class}/available-subjects', [\App\Http\Controllers\Api\SchoolClassController::class, 'availableSubjects'])->middleware('permission:classes:read');
+    Route::get('classes/{class}/timetable', [\App\Http\Controllers\Api\SchoolClassController::class, 'timetable'])->middleware('permission:classes:read');
+    Route::get('timetable/conflicts', [\App\Http\Controllers\Api\TimetableController::class, 'conflicts'])->middleware('permission:classes:read');
     Route::get('classes/{class}/subjects', [\App\Http\Controllers\Api\ClassSubjectController::class, 'index'])->middleware('permission:classes:read');
+    Route::get('class-subjects', [\App\Http\Controllers\Api\ClassSubjectController::class, 'globalIndex'])->middleware('permission:classes:read');
     Route::post('classes/{class}/subjects', [\App\Http\Controllers\Api\ClassSubjectController::class, 'store'])->middleware('permission:classes:write');
     Route::put('class-subjects/{classSubject}', [\App\Http\Controllers\Api\ClassSubjectController::class, 'update'])->middleware('permission:classes:write');
     Route::put('class-subjects/{classSubject}/schedule', [\App\Http\Controllers\Api\ClassSubjectController::class, 'updateSchedule'])->middleware('permission:classes:write');
@@ -121,12 +125,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Setup / Configuration ----
     Route::get('setup/status', [\App\Http\Controllers\Api\SetupStatusController::class, 'status'])->middleware('permission:settings:read');
-    Route::get('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'index'])->middleware('permission:settings:read');
-    Route::post('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'store'])->middleware('permission:settings:write');
-    Route::delete('config/personnel-ref/{item}', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'destroy'])->middleware('permission:settings:write');
+    Route::get('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'index'])->middleware('permission:personnel:read');
+    Route::post('config/personnel-ref', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'store'])->middleware('permission:personnel:write');
+    Route::delete('config/personnel-ref/{item}', [\App\Http\Controllers\Api\PersonnelConfigController::class, 'destroy'])->middleware('permission:personnel:write');
 
     // ---- Enseignants (profil pédagogique — legacy) ----
     Route::get('me/teaching-profile', [\App\Http\Controllers\Api\TeacherProfileController::class, 'myProfile']);
+    Route::get('me/classes', [\App\Http\Controllers\Api\TeacherProfileController::class, 'myClasses']);
     Route::get('me/timetable', [\App\Http\Controllers\Api\TeacherProfileController::class, 'myTimetable']);
     Route::get('teachers/workload-summary', [\App\Http\Controllers\Api\TeacherProfileController::class, 'workloadSummary'])->middleware('permission:teachers:read');
     Route::get('teachers', [\App\Http\Controllers\Api\TeacherProfileController::class, 'index'])->middleware('permission:teachers:read');
@@ -151,6 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/children', [\App\Http\Controllers\Api\ParentAcademicController::class, 'children']);
         Route::get('/children/{studentId}/evolution', [\App\Http\Controllers\Api\ParentAcademicController::class, 'childEvolution']);
         Route::get('/children/{studentId}/academic-profile', [\App\Http\Controllers\Api\ParentAcademicController::class, 'childProfile']);
+        Route::get('/children/{studentId}/report-card/pdf', [\App\Http\Controllers\Api\ParentAcademicController::class, 'downloadChildReportCardPdf']);
         Route::get('/children/{studentId}/report-card', [\App\Http\Controllers\Api\ParentAcademicController::class, 'childReportCard']);
     });
 
@@ -159,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Lecture (grades:read, grades:*, director…)
         Route::middleware('permission:grades:read')->group(function () {
             Route::get('/catalog', [\App\Http\Controllers\Api\AcademicController::class, 'catalog']);
+            Route::get('/school-year', [\App\Http\Controllers\Api\GradeController::class, 'schoolYear']);
             Route::get('/my-classes', [\App\Http\Controllers\Api\GradeController::class, 'myClasses']);
             Route::get('/grid', [\App\Http\Controllers\Api\GradeController::class, 'grid']);
             Route::get('/classes/{classId}/students', [\App\Http\Controllers\Api\GradeController::class, 'classStudents']);
@@ -168,12 +175,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/students/{studentId}/academic-profile', [\App\Http\Controllers\Api\AcademicController::class, 'studentProfile']);
             Route::get('/classes/{classId}/averages', [\App\Http\Controllers\Api\GradeController::class, 'classAverages']);
             Route::get('/classes/{classId}/bulletin', [\App\Http\Controllers\Api\AcademicController::class, 'classBulletin']);
+            Route::get('/students/{studentId}/report-card/pdf', [\App\Http\Controllers\Api\GradeController::class, 'downloadReportCardPdf']);
             Route::get('/students/{studentId}/report-card', [\App\Http\Controllers\Api\GradeController::class, 'viewReportCard']);
+            Route::get('/evaluation-sessions', [\App\Http\Controllers\Api\EvaluationSessionController::class, 'index']);
             Route::get('/{id}', [\App\Http\Controllers\Api\GradeController::class, 'show']);
         });
 
         Route::middleware('permission:grades:*')->group(function () {
-            Route::get('/evaluation-sessions', [\App\Http\Controllers\Api\EvaluationSessionController::class, 'index']);
             Route::post('/evaluation-sessions', [\App\Http\Controllers\Api\EvaluationSessionController::class, 'store']);
             Route::get('/evaluation-sessions/{id}', [\App\Http\Controllers\Api\EvaluationSessionController::class, 'show']);
             Route::post('/evaluation-sessions/{id}/grades', [\App\Http\Controllers\Api\EvaluationSessionController::class, 'storeGrades']);
@@ -189,6 +197,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/publish', [\App\Http\Controllers\Api\GradeController::class, 'publish']);
             Route::post('/students/{studentId}/calculate', [\App\Http\Controllers\Api\GradeController::class, 'calculateStudentAverages']);
             Route::post('/classes/{classId}/calculate', [\App\Http\Controllers\Api\GradeController::class, 'calculateClassAverages']);
+            Route::post('/classes/{classId}/report-cards/publish', [\App\Http\Controllers\Api\GradeController::class, 'publishClassReportCards']);
+            Route::post('/classes/{classId}/report-cards', [\App\Http\Controllers\Api\GradeController::class, 'generateClassReportCards']);
             Route::post('/students/{studentId}/report-card', [\App\Http\Controllers\Api\GradeController::class, 'generateReportCard']);
             Route::post('/students/{studentId}/report-card/publish', [\App\Http\Controllers\Api\GradeController::class, 'publishReportCard']);
         });

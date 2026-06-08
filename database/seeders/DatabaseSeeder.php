@@ -18,9 +18,13 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesSeeder::class,
             UsersSeeder::class,
+            PersonnelConfigSeeder::class,
+            SyncPersonnelFromUsersSeeder::class,
+            SchoolSettingsSeeder::class,
             RdcEducationCatalogSeeder::class,
             RdcGeoSeeder::class,
             FinanceCatalogSeeder::class,
+            FeeRatesSeeder::class,
             SchoolClassesSeeder::class,
             StudentsSeeder::class,
             GradeSystemSeeder::class,

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UsersSeeder extends Seeder
 {
@@ -20,7 +19,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'admin',
                 'department' => 'Direction',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             // Directeur
             [
@@ -31,7 +30,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'director',
                 'department' => 'Direction',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             // Comptable
             [
@@ -42,7 +41,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'accountant',
                 'department' => 'Finances',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             // Secrétaire
             [
@@ -53,7 +52,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'secretary',
                 'department' => 'Administration',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             // Enseignants
             [
@@ -64,7 +63,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'teacher',
                 'department' => 'Mathématiques',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             [
                 'first_name' => 'Prof. Yvonne',
@@ -74,7 +73,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'teacher',
                 'department' => 'Français',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             [
                 'first_name' => 'Prof. Patrick',
@@ -84,7 +83,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'teacher',
                 'department' => 'Sciences',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             [
                 'first_name' => 'Prof. Cécile',
@@ -94,7 +93,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'teacher',
                 'department' => 'Anglais',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             [
                 'first_name' => 'Prof. Didier',
@@ -104,7 +103,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'teacher',
                 'department' => 'Histoire-Géo',
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             // Parents
             [
@@ -115,7 +114,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'parent',
                 'department' => null,
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
             [
                 'first_name' => 'Chantal',
@@ -125,7 +124,7 @@ class UsersSeeder extends Seeder
                 'role'       => 'parent',
                 'department' => null,
                 'is_active'  => true,
-                'password'   => Hash::make('password'),
+                'password'   => 'password',
             ],
         ];
 
@@ -139,3 +138,4 @@ class UsersSeeder extends Seeder
         $this->command->info('✅ ' . count($users) . ' utilisateurs créés.');
     }
 }
+
